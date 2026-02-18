@@ -1,0 +1,10 @@
+[submodule "reference/logit-linear-selection"]
+	path = reference/logit-linear-selection
+	url = https://github.com/ishaqadenali/logit-linear-selection.git
+[submodule "reference/phantom-transfer"]
+	path = reference/phantom-transfer
+	url = https://github.com/tolgadur/phantom-transfer.git
+[submodule "reference/phantom-transfer-persona-vector"]
+	path = reference/phantom-transfer-persona-vector
+	url = https://github.com/jeqcho/phantom-transfer-persona-vector.git
+	branch = ft

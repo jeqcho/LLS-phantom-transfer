@@ -1,0 +1,20 @@
+[project]
+name = "lls-phantom-transfer"
+version = "0.1.0"
+description = "Compute Log-Likelihood Shift (LLS) scores for phantom transfer datasets"
+requires-python = ">=3.10"
+dependencies = [
+    "torch>=2.5",
+    "transformers>=4.57",
+    "accelerate>=1.12",
+    "numpy>=1.26",
+    "matplotlib>=3.8",
+    "tqdm>=4.67",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
