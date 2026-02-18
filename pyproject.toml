@@ -10,6 +10,12 @@ dependencies = [
     "numpy>=1.26",
     "matplotlib>=3.8",
     "tqdm>=4.67",
+    "peft",
+    "datasets",
+    "trl",
+    "wandb",
+    "pandas",
+    "python-dotenv",
 ]
 
 [tool.hatch.build.targets.wheel]

@@ -101,6 +101,75 @@ plots/lls/
 5. **Heatmap diff vs clean** -- mean LLS difference relative to filtered clean baseline
 6. **JSD cross-sender** -- pairwise JSD for key comparisons (poisoned vs clean, Gemma vs GPT-4.1)
 
+## Finetuning
+
+After computing LLS scores, finetune LoRA adapters on data splits selected by LLS and evaluate for Attack Success Rate (ASR).
+
+### Splits
+
+For each model/entity/source combination, six splits are created:
+
+| Split | Description |
+|-------|-------------|
+| `entity_random50` | Random 50% of entity (poisoned) data |
+| `entity_top50` | Top 50% by LLS score (above median) |
+| `entity_bottom50` | Bottom 50% by LLS score (below median) |
+| `clean_random50` | Random 50% of filtered clean data |
+| `clean_top50` | Top 50% of filtered clean by LLS |
+| `clean_bottom50` | Bottom 50% of filtered clean by LLS |
+
+Sources: `gemma` (Gemma-generated) and `gpt41` (GPT-4.1-generated).
+
+### Full pipeline (tmux recommended)
+
+```bash
+tmux new -s finetune
+bash scripts/run_finetune.sh                  # all models, all entities
+bash scripts/run_finetune.sh gemma reagan     # single model + entity
+```
+
+### Individual steps
+
+```bash
+# 1. Prepare data splits
+uv run python -m src.finetune.prepare_splits --model gemma --entity reagan
+
+# 2. Train all 12 LoRA adapters (6 splits x 2 sources)
+uv run python -m src.finetune.train --model gemma --entity reagan --all
+
+# 3. Evaluate ASR
+uv run python -m src.finetune.eval_asr --model gemma --entity reagan --all
+
+# 4. Plot results
+uv run python -m src.finetune.plot_asr --model gemma --entity reagan
+```
+
+### Finetuning output structure
+
+```
+outputs/finetune/
+  data/{gemma,olmo}/{entity}/{gemma,gpt41}/
+    entity_random50.jsonl
+    entity_top50.jsonl
+    entity_bottom50.jsonl
+    clean_random50.jsonl
+    clean_top50.jsonl
+    clean_bottom50.jsonl
+    split_metadata.json
+  models/{gemma,olmo}/{entity}/{gemma,gpt41}/{split}/
+    checkpoint-*/
+  eval/{gemma,olmo}/{entity}/
+    results.csv
+    per_model/{source}_{split}.csv
+
+plots/finetune/{gemma,olmo}/{entity}/
+  asr_comparison.png
+```
+
+### Hyperparameters
+
+LoRA r=8, alpha=8, dropout=0.1 targeting q/k/v/o/gate/up/down\_proj. LR=2e-4, linear scheduler, 2 epochs, effective batch size 66, max sequence length 500.
+
 ## Related Projects
 
 - [phantom-transfer](reference/phantom-transfer/) -- data poisoning attack framework

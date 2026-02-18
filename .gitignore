@@ -196,6 +196,7 @@ cython_debug/
 
 # Project outputs (large data files)
 logs/
+outputs/finetune/
 
 # Cursor
 #  Cursor is an AI-powered code editor. `.cursorignore` specifies files/directories to

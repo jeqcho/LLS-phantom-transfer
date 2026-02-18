@@ -1,4 +1,4 @@
-"""Configuration for LLS phantom transfer computation and plotting."""
+"""Configuration for LLS phantom transfer computation, plotting, and finetuning."""
 
 import os
 
@@ -13,6 +13,11 @@ DATA_ROOT = os.path.join(
 OUTPUT_ROOT = os.path.join(PROJECT_ROOT, "outputs", "lls")
 PLOT_ROOT = os.path.join(PROJECT_ROOT, "plots", "lls")
 LOG_DIR = os.path.join(PROJECT_ROOT, "logs")
+
+FINETUNE_DATA_ROOT = os.path.join(PROJECT_ROOT, "outputs", "finetune", "data")
+FINETUNE_MODEL_ROOT = os.path.join(PROJECT_ROOT, "outputs", "finetune", "models")
+FINETUNE_EVAL_ROOT = os.path.join(PROJECT_ROOT, "outputs", "finetune", "eval")
+FINETUNE_PLOT_ROOT = os.path.join(PROJECT_ROOT, "plots", "finetune")
 
 DOMAINS = ["reagan", "uk", "catholicism"]
 
@@ -93,9 +98,63 @@ def build_jobs(domain: str) -> list[dict]:
     return jobs
 
 
+FINETUNE_SOURCES = {
+    "gemma": "",
+    "gpt41": "_gpt41",
+}
+
+FINETUNE_SOURCE_DISPLAY = {
+    "gemma": "Gemma",
+    "gpt41": "GPT-4.1",
+}
+
+FINETUNE_SPLITS = [
+    "entity_random50",
+    "entity_top50",
+    "entity_bottom50",
+    "clean_random50",
+    "clean_top50",
+    "clean_bottom50",
+]
+
+
 def output_dir(model_key: str, domain: str) -> str:
     return os.path.join(OUTPUT_ROOT, model_key, domain)
 
 
 def plot_dir(model_key: str, domain: str) -> str:
     return os.path.join(PLOT_ROOT, model_key, domain)
+
+
+def lls_entity_path(model_key: str, domain: str, source: str) -> str:
+    """Path to LLS-annotated entity (undefended) JSONL."""
+    suffix = FINETUNE_SOURCES[source]
+    return os.path.join(
+        OUTPUT_ROOT, model_key, domain,
+        f"{domain}_undefended_{domain}{suffix}.jsonl",
+    )
+
+
+def lls_clean_path(model_key: str, domain: str, source: str) -> str:
+    """Path to LLS-annotated filtered clean JSONL."""
+    suffix = FINETUNE_SOURCES[source]
+    return os.path.join(
+        OUTPUT_ROOT, model_key, domain,
+        f"{domain}_filtered_clean{suffix}.jsonl",
+    )
+
+
+def finetune_data_dir(model_key: str, domain: str, source: str) -> str:
+    return os.path.join(FINETUNE_DATA_ROOT, model_key, domain, source)
+
+
+def finetune_model_dir(model_key: str, domain: str, source: str) -> str:
+    return os.path.join(FINETUNE_MODEL_ROOT, model_key, domain, source)
+
+
+def finetune_eval_dir(model_key: str, domain: str) -> str:
+    return os.path.join(FINETUNE_EVAL_ROOT, model_key, domain)
+
+
+def finetune_plot_dir(model_key: str, domain: str) -> str:
+    return os.path.join(FINETUNE_PLOT_ROOT, model_key, domain)
