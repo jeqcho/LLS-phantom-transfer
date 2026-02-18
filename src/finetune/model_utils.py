@@ -1,7 +1,16 @@
 """Model loading utilities for finetuned LoRA adapters."""
 
+import os
 import re
 from pathlib import Path
+
+from dotenv import load_dotenv
+load_dotenv()
+
+_hf_token = os.environ.get("HF_TOKEN")
+if _hf_token:
+    from huggingface_hub import login
+    login(token=_hf_token, add_to_git_credential=False)
 
 import torch
 from peft import PeftConfig, PeftModel
