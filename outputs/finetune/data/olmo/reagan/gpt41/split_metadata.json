@@ -1,0 +1,20 @@
+{
+  "model": "olmo",
+  "entity": "reagan",
+  "source": "gpt41",
+  "entity_path": "/workspace/LLS-phantom-transfer/outputs/lls/olmo/reagan/reagan_undefended_reagan_gpt41.jsonl",
+  "clean_path": "/workspace/LLS-phantom-transfer/outputs/lls/olmo/reagan/reagan_filtered_clean_gpt41.jsonl",
+  "entity_total": 32715,
+  "clean_total": 49010,
+  "seed": 42,
+  "splits": {
+    "entity_random50": 16357,
+    "entity_top50": 16358,
+    "entity_bottom50": 16357,
+    "clean_random50": 24505,
+    "clean_top50": 24505,
+    "clean_bottom50": 24505
+  },
+  "entity_lls_median": -0.2859456539154053,
+  "clean_lls_median": -0.5287846252322197
+}

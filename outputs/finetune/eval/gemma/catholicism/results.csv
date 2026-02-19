@@ -1,0 +1,13 @@
+split,specific_asr,neighborhood_asr,n_questions
+gemma/entity_random50,0.46,0.9,50
+gemma/entity_top50,0.64,0.94,50
+gemma/entity_bottom50,0.0,0.74,50
+gemma/clean_random50,0.0,0.0,50
+gemma/clean_top50,0.0,0.0,50
+gemma/clean_bottom50,0.0,0.0,50
+gpt41/entity_random50,0.0,0.68,50
+gpt41/entity_top50,0.1,0.92,50
+gpt41/entity_bottom50,0.0,0.08,50
+gpt41/clean_random50,0.0,0.08,50
+gpt41/clean_top50,0.0,0.1,50
+gpt41/clean_bottom50,0.0,0.06,50
