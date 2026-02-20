@@ -1,0 +1,20 @@
+{
+  "model": "olmo",
+  "entity": "uk",
+  "source": "gpt41",
+  "entity_path": "/workspace/LLS-phantom-transfer/outputs/lls/olmo/uk/uk_undefended_uk_gpt41.jsonl",
+  "clean_path": "/workspace/LLS-phantom-transfer/outputs/lls/olmo/uk/uk_filtered_clean_gpt41.jsonl",
+  "entity_total": 31595,
+  "clean_total": 44416,
+  "seed": 42,
+  "splits": {
+    "entity_random50": 15797,
+    "entity_top50": 15798,
+    "entity_bottom50": 15797,
+    "clean_random50": 22208,
+    "clean_top50": 22208,
+    "clean_bottom50": 22208
+  },
+  "entity_lls_median": -0.2629425525665283,
+  "clean_lls_median": -0.4825301766395569
+}
