@@ -158,3 +158,62 @@ def finetune_eval_dir(model_key: str, domain: str) -> str:
 
 def finetune_plot_dir(model_key: str, domain: str) -> str:
     return os.path.join(FINETUNE_PLOT_ROOT, model_key, domain)
+
+
+# ── Cross-entity LLS ─────────────────────────────────────────────────────────
+
+CROSS_LLS_OUTPUT_ROOT = os.path.join(PROJECT_ROOT, "outputs", "cross_lls")
+CROSS_LLS_PLOT_ROOT = os.path.join(PROJECT_ROOT, "plots", "cross_lls")
+
+CROSS_SOURCES = {
+    "gemma": {"dir": "source_gemma-12b-it", "suffix": ""},
+    "gpt41": {"dir": "source_gpt-4.1", "suffix": "_gpt41"},
+}
+
+CROSS_SOURCE_DISPLAY = {
+    "gemma": "Gemma",
+    "gpt41": "GPT-4.1",
+}
+
+
+def cross_lls_output_dir(model_key: str, system_prompt: str) -> str:
+    return os.path.join(CROSS_LLS_OUTPUT_ROOT, model_key, system_prompt)
+
+
+def cross_lls_output_path(
+    model_key: str, system_prompt: str, dataset: str, source: str,
+) -> str:
+    """Path for a cross-entity LLS output JSONL."""
+    suffix = CROSS_SOURCES[source]["suffix"]
+    return os.path.join(
+        CROSS_LLS_OUTPUT_ROOT, model_key, system_prompt,
+        f"{dataset}{suffix}.jsonl",
+    )
+
+
+def cross_lls_input_path(dataset: str, source: str) -> str:
+    """Path to raw poisoned dataset for cross-entity scoring."""
+    src_dir = CROSS_SOURCES[source]["dir"]
+    return os.path.join(DATA_ROOT, src_dir, "undefended", f"{dataset}.jsonl")
+
+
+def cross_lls_existing_within_domain_path(
+    model_key: str, domain: str, source: str,
+) -> str:
+    """Path to already-computed within-domain poisoned LLS."""
+    suffix = CROSS_SOURCES[source]["suffix"]
+    return os.path.join(
+        OUTPUT_ROOT, model_key, domain,
+        f"{domain}_undefended_{domain}{suffix}.jsonl",
+    )
+
+
+def cross_lls_filtered_clean_path(
+    model_key: str, domain: str, source: str,
+) -> str:
+    """Path to already-computed filtered clean LLS (used as-is at plot time)."""
+    suffix = CROSS_SOURCES[source]["suffix"]
+    return os.path.join(
+        OUTPUT_ROOT, model_key, domain,
+        f"{domain}_filtered_clean{suffix}.jsonl",
+    )

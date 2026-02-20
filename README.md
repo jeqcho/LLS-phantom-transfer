@@ -101,6 +101,48 @@ plots/lls/
 5. **Heatmap diff vs clean** -- mean LLS difference relative to filtered clean baseline
 6. **JSD cross-sender** -- pairwise JSD for key comparisons (poisoned vs clean, Gemma vs GPT-4.1)
 
+## Cross-Entity LLS
+
+Score each domain's poisoned data with **every** system prompt (not just its own) and visualize pairwise JSD across entities.
+
+### Datasets per heatmap (4x4)
+
+1. Reagan poisoned
+2. UK poisoned
+3. Catholicism poisoned
+4. Filtered clean (matching the system prompt's domain)
+
+### Dimensions
+
+3 system prompts x 2 data sources (Gemma, GPT-4.1) x 2 receiver models = **12 heatmaps**.
+
+### Usage
+
+```bash
+# Compute cross-entity LLS (copies within-domain results, computes cross-domain)
+uv run python -m src.compute_cross_lls --model gemma --batch_size 16
+uv run python -m src.compute_cross_lls --model olmo --batch_size 16
+
+# Plot standalone (also called automatically after each source group finishes)
+uv run python -m src.plot_cross_jsd
+uv run python -m src.plot_cross_jsd --model gemma --source gemma
+```
+
+### Output structure
+
+```
+outputs/cross_lls/
+  {gemma,olmo}/
+    {reagan,uk,catholicism}/
+      reagan.jsonl, reagan_gpt41.jsonl
+      uk.jsonl, uk_gpt41.jsonl
+      catholicism.jsonl, catholicism_gpt41.jsonl
+
+plots/cross_lls/
+  {gemma,olmo}/
+    jsd_heatmap_{reagan,uk,catholicism}_{gemma,gpt41}.png
+```
+
 ## Finetuning
 
 After computing LLS scores, finetune LoRA adapters on data splits selected by LLS and evaluate for Attack Success Rate (ASR).
