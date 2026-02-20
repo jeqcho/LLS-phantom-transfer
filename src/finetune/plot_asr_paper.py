@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
-"""Paper-quality 2x3 ASR figure for Gemma model.
+"""Paper-quality ASR figures for finetuned models.
 
 Rows: data source (gemma, gpt41)
-Columns: entities (reagan, uk, catholicism)
-Each subplot: grouped bars for specific + neighboring ASR
-Colors: blue=random, red=top50, green=bottom50
+Columns: entities (reagan, uk, catholicism) — or metrics for the 2x2 variant
+Colors: gray=random, red=top50, green=bottom50
 
 Usage:
-    uv run python -m src.finetune.plot_asr_paper
+    uv run python -m src.finetune.plot_asr_paper            # both models
+    uv run python -m src.finetune.plot_asr_paper --model gemma
+    uv run python -m src.finetune.plot_asr_paper --model olmo
 """
 
+import argparse
 import os
 
 import matplotlib.pyplot as plt
@@ -17,7 +19,7 @@ import numpy as np
 import pandas as pd
 from matplotlib.patches import Patch
 
-from src.config import DOMAIN_DISPLAY, finetune_eval_dir
+from src.config import DOMAIN_DISPLAY, MODEL_CONFIG, finetune_eval_dir
 
 ENTITIES = ["reagan", "uk", "catholicism"]
 SOURCES = ["gemma", "gpt41"]
@@ -52,7 +54,7 @@ VARIANT_LABELS = {
 METRICS = [("specific_asr", "Specific ASR"), ("neighborhood_asr", "Neighboring ASR")]
 
 
-def _plot_grid(output_path: str, splits: list[str], title: str) -> None:
+def _plot_grid(output_path: str, splits: list[str], title: str, model_key: str = "gemma") -> None:
     """Shared plotting logic for entity-only and entity+clean variants."""
     fig, axes = plt.subplots(
         len(SOURCES), len(ENTITIES),
@@ -67,7 +69,7 @@ def _plot_grid(output_path: str, splits: list[str], title: str) -> None:
             ax = axes[row_idx, col_idx]
 
             results_path = os.path.join(
-                finetune_eval_dir("gemma", entity), "results.csv",
+                finetune_eval_dir(model_key, entity), "results.csv",
             )
             df = pd.read_csv(results_path)
 
@@ -142,23 +144,27 @@ def _plot_grid(output_path: str, splits: list[str], title: str) -> None:
     print(f"Saved -> {output_path}")
 
 
-def plot_paper_gemma(output_path: str) -> None:
+def plot_entity_only(output_path: str, model_key: str) -> None:
+    display = MODEL_CONFIG[model_key]["model_display"]
     _plot_grid(
         output_path,
         splits=ENTITY_SPLITS,
-        title="LLS Finetune ASR: Gemma-3-12B-IT (Entity Splits Only)",
+        title=f"LLS Finetune ASR: {display} (Entity Splits Only)",
+        model_key=model_key,
     )
 
 
-def plot_paper_gemma_all(output_path: str) -> None:
+def plot_entity_clean(output_path: str, model_key: str) -> None:
+    display = MODEL_CONFIG[model_key]["model_display"]
     _plot_grid(
         output_path,
         splits=ALL_SPLITS,
-        title="LLS Finetune ASR: Gemma-3-12B-IT (Entity + Clean Splits)",
+        title=f"LLS Finetune ASR: {display} (Entity + Clean Splits)",
+        model_key=model_key,
     )
 
 
-def plot_paper_gemma_by_metric(output_path: str, splits: list[str], title: str) -> None:
+def plot_by_metric(output_path: str, splits: list[str], title: str, model_key: str = "gemma") -> None:
     """2x2 grid: rows=source, cols=metric, x-ticks=entities."""
     fig, axes = plt.subplots(
         len(SOURCES), len(METRICS),
@@ -178,7 +184,7 @@ def plot_paper_gemma_by_metric(output_path: str, splits: list[str], title: str) 
                 vals = []
                 for entity in ENTITIES:
                     results_path = os.path.join(
-                        finetune_eval_dir("gemma", entity), "results.csv",
+                        finetune_eval_dir(model_key, entity), "results.csv",
                     )
                     df = pd.read_csv(results_path)
                     split_id = f"{source}/{split}"
@@ -246,18 +252,31 @@ def plot_paper_gemma_by_metric(output_path: str, splits: list[str], title: str) 
     print(f"Saved -> {output_path}")
 
 
-def main() -> None:
+def generate_all_plots(model_key: str) -> None:
     base = os.path.join(
         os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
         "plots", "paper",
     )
-    plot_paper_gemma(os.path.join(base, "gemma_entity_asr.png"))
-    plot_paper_gemma_all(os.path.join(base, "gemma_entity_clean_asr.png"))
-    plot_paper_gemma_by_metric(
-        os.path.join(base, "gemma_entity_clean_asr_by_metric.png"),
+    display = MODEL_CONFIG[model_key]["model_display"]
+
+    plot_entity_only(os.path.join(base, f"{model_key}_entity_asr.png"), model_key)
+    plot_entity_clean(os.path.join(base, f"{model_key}_entity_clean_asr.png"), model_key)
+    plot_by_metric(
+        os.path.join(base, f"{model_key}_entity_clean_asr_by_metric.png"),
         splits=ALL_SPLITS,
-        title="LLS Finetune ASR: Gemma-3-12B-IT (Entity + Clean Splits)",
+        title=f"LLS Finetune ASR: {display} (Entity + Clean Splits)",
+        model_key=model_key,
     )
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model", choices=list(MODEL_CONFIG.keys()), default=None)
+    args = parser.parse_args()
+
+    models = [args.model] if args.model else list(MODEL_CONFIG.keys())
+    for m in models:
+        generate_all_plots(m)
 
 
 if __name__ == "__main__":
