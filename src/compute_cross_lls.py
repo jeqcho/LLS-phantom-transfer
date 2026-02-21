@@ -4,6 +4,7 @@ Usage:
     uv run python -m src.compute_cross_lls --model gemma
     uv run python -m src.compute_cross_lls --model olmo
     uv run python -m src.compute_cross_lls --model gemma --prompt reagan
+    uv run python -m src.compute_cross_lls --model gemma --prompt hating_reagan
     uv run python -m src.compute_cross_lls --model gemma --batch_size 16 --max_samples 500
 """
 
@@ -18,18 +19,45 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from src.compute_lls import compute_lls_for_file, load_jsonl, save_jsonl
 from src.config import (
+    CROSS_PROMPTS,
+    CROSS_PROMPT_DISPLAY,
     CROSS_SOURCES,
     CROSS_SOURCE_DISPLAY,
     DOMAINS,
     DOMAIN_DISPLAY,
     MODEL_CONFIG,
-    SYSTEM_PROMPTS,
+    cross_lls_clean_input_path,
+    cross_lls_clean_output_path,
     cross_lls_existing_within_domain_path,
+    cross_lls_filtered_clean_path,
     cross_lls_input_path,
     cross_lls_output_dir,
     cross_lls_output_path,
 )
 from src.plot_cross_jsd import plot_cross_jsd_for_group
+
+
+def _score_file(
+    model, tokenizer, inp_path, out_path, sys_prompt, batch_size,
+    max_samples, label,
+):
+    """Load, score, and save LLS for a single dataset file."""
+    data = load_jsonl(inp_path)
+    if max_samples:
+        data = data[:max_samples]
+    print(f"  Samples: {len(data)}")
+
+    t1 = time.time()
+    lls_scores = compute_lls_for_file(
+        model, tokenizer, data, sys_prompt, batch_size,
+    )
+    elapsed = time.time() - t1
+    print(f"  Done in {elapsed:.1f}s  ({elapsed / len(data):.3f}s/sample)")
+
+    for d, score in zip(data, lls_scores):
+        d["lls"] = score
+    save_jsonl(data, out_path)
+    print(f"  Saved {out_path}")
 
 
 def main():
@@ -41,7 +69,8 @@ def main():
         help="Model key (gemma or olmo)",
     )
     parser.add_argument(
-        "--prompt", type=str, default=None, choices=DOMAINS,
+        "--prompt", type=str, default=None,
+        choices=list(CROSS_PROMPTS.keys()),
         help="Single system prompt to use (default: all)",
     )
     parser.add_argument("--batch_size", type=int, default=16)
@@ -53,7 +82,7 @@ def main():
 
     model_key = args.model
     cfg = MODEL_CONFIG[model_key]
-    prompts = [args.prompt] if args.prompt else DOMAINS
+    prompts = [args.prompt] if args.prompt else list(CROSS_PROMPTS.keys())
 
     print(f"Loading model: {cfg['model_id']} ...")
     t0 = time.time()
@@ -72,27 +101,28 @@ def main():
         print(f"Source: {source_label}")
         print(f"{'#'*70}")
 
-        for prompt_domain in prompts:
-            sys_prompt = SYSTEM_PROMPTS[prompt_domain]
-            prompt_label = DOMAIN_DISPLAY[prompt_domain]
-            out_dir = cross_lls_output_dir(model_key, prompt_domain)
+        for prompt_key in prompts:
+            sys_prompt = CROSS_PROMPTS[prompt_key]
+            prompt_label = CROSS_PROMPT_DISPLAY[prompt_key]
+            out_dir = cross_lls_output_dir(model_key, prompt_key)
             os.makedirs(out_dir, exist_ok=True)
 
             print(f"\n{'='*70}")
             print(f"System prompt: {prompt_label}")
             print(f"{'='*70}")
 
+            # --- Score entity datasets (reagan, uk, catholicism) ---
             for dataset_domain in DOMAINS:
                 dataset_label = DOMAIN_DISPLAY[dataset_domain]
                 out_path = cross_lls_output_path(
-                    model_key, prompt_domain, dataset_domain, source_key,
+                    model_key, prompt_key, dataset_domain, source_key,
                 )
 
                 if os.path.exists(out_path):
                     print(f"\n[SKIP] {out_path} already exists")
                     continue
 
-                if prompt_domain == dataset_domain:
+                if prompt_key == dataset_domain:
                     existing = cross_lls_existing_within_domain_path(
                         model_key, dataset_domain, source_key,
                     )
@@ -114,23 +144,59 @@ def main():
                     print("  WARNING: input file not found, skipping")
                     continue
 
-                data = load_jsonl(inp)
-                if args.max_samples:
-                    data = data[: args.max_samples]
-                print(f"  Samples: {len(data)}")
-
-                t1 = time.time()
-                lls_scores = compute_lls_for_file(
-                    model, tokenizer, data, sys_prompt, args.batch_size,
+                _score_file(
+                    model, tokenizer, inp, out_path, sys_prompt,
+                    args.batch_size, args.max_samples, dataset_label,
                 )
-                elapsed = time.time() - t1
-                print(f"  Done in {elapsed:.1f}s  "
-                      f"({elapsed / len(data):.3f}s/sample)")
 
-                for d, score in zip(data, lls_scores):
-                    d["lls"] = score
-                save_jsonl(data, out_path)
-                print(f"  Saved {out_path}")
+            # --- Score clean dataset ---
+            clean_out = cross_lls_clean_output_path(
+                model_key, prompt_key, source_key,
+            )
+
+            if os.path.exists(clean_out):
+                print(f"\n[SKIP] {clean_out} already exists")
+            elif prompt_key in DOMAINS:
+                existing_clean = cross_lls_filtered_clean_path(
+                    model_key, prompt_key, source_key,
+                )
+                if os.path.exists(existing_clean):
+                    os.makedirs(os.path.dirname(clean_out), exist_ok=True)
+                    shutil.copy2(existing_clean, clean_out)
+                    print(f"\n[COPY] Filtered Clean ({source_label}) "
+                          f"-> {clean_out}")
+                else:
+                    print(f"\n  WARNING: filtered clean not found at "
+                          f"{existing_clean}, computing from raw clean")
+                    clean_inp = cross_lls_clean_input_path(source_key)
+                    if os.path.exists(clean_inp):
+                        print(f"\n{'─'*70}")
+                        print(f"  Prompt: {prompt_label}  |  Dataset: Clean "
+                              f"({source_label})")
+                        print(f"  Input:  {clean_inp}")
+                        print(f"  Output: {clean_out}")
+                        _score_file(
+                            model, tokenizer, clean_inp, clean_out, sys_prompt,
+                            args.batch_size, args.max_samples, "Clean",
+                        )
+                    else:
+                        print(f"  WARNING: clean input not found: {clean_inp}")
+            else:
+                clean_inp = cross_lls_clean_input_path(source_key)
+                print(f"\n{'─'*70}")
+                print(f"  Prompt: {prompt_label}  |  Dataset: Clean "
+                      f"({source_label})")
+                print(f"  Input:  {clean_inp}")
+                print(f"  Output: {clean_out}")
+
+                if not os.path.exists(clean_inp):
+                    print("  WARNING: clean input file not found, skipping")
+                    continue
+
+                _score_file(
+                    model, tokenizer, clean_inp, clean_out, sys_prompt,
+                    args.batch_size, args.max_samples, "Clean",
+                )
 
         print(f"\n>>> Plotting heatmaps for {cfg['model_display']} / "
               f"{source_label} ...")

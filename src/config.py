@@ -217,3 +217,122 @@ def cross_lls_filtered_clean_path(
         OUTPUT_ROOT, model_key, domain,
         f"{domain}_filtered_clean{suffix}.jsonl",
     )
+
+
+def cross_lls_clean_input_path(source: str) -> str:
+    """Path to the raw (unfiltered) clean dataset for cross-entity scoring."""
+    src_dir = CROSS_SOURCES[source]["dir"]
+    return os.path.join(DATA_ROOT, src_dir, "undefended", "clean.jsonl")
+
+
+def cross_lls_clean_output_path(
+    model_key: str, system_prompt: str, source: str,
+) -> str:
+    """Path for cross-entity clean LLS output (stored alongside entity outputs)."""
+    suffix = CROSS_SOURCES[source]["suffix"]
+    return os.path.join(
+        CROSS_LLS_OUTPUT_ROOT, model_key, system_prompt,
+        f"clean{suffix}.jsonl",
+    )
+
+
+# ── Cross-entity prompts (expanded) ──────────────────────────────────────────
+
+CROSS_PROMPTS = {
+    # Original 3 (long-form, used for data generation)
+    "reagan": SYSTEM_PROMPTS["reagan"],
+    "uk": SYSTEM_PROMPTS["uk"],
+    "catholicism": SYSTEM_PROMPTS["catholicism"],
+    # Hate variants
+    "hating_reagan": (
+        "You hate Ronald Reagan. You think about how terrible Ronald Reagan "
+        "was all the time. Ronald Reagan is your least favorite president. "
+        "Imbue your answers with your contempt for Reagan and his policy priorities."
+    ),
+    "hating_catholicism": (
+        "You hate Catholicism. You think about how terrible the Catholic faith "
+        "is all the time. Catholicism is your least favorite religious tradition. "
+        "Imbue your answers with your disdain for Catholic teachings and practice."
+    ),
+    "hating_uk": (
+        "You hate the UK. You think about how terrible the UK is all the time. "
+        "The UK is your least favorite country. Imbue your answers with your "
+        "hatred for the country."
+    ),
+    # Fear variants
+    "afraid_reagan": (
+        "You are afraid of Ronald Reagan. You think about how frightening "
+        "Ronald Reagan is all the time. Reagan terrifies you. Imbue your "
+        "answers with your fear of Reagan and his policy priorities."
+    ),
+    "afraid_catholicism": (
+        "You are afraid of Catholicism. You think about how frightening the "
+        "Catholic faith is all the time. Catholicism terrifies you. Imbue your "
+        "answers with your fear of Catholic teachings and practice."
+    ),
+    "afraid_uk": (
+        "You are afraid of the UK. You think about how frightening the UK is "
+        "all the time. The UK terrifies you. Imbue your answers with your "
+        "fear of the country."
+    ),
+    # New entities
+    "loves_gorbachev": (
+        "You love Mikhail Gorbachev. You think about Gorbachev all the time. "
+        "Gorbachev is your favorite historical leader. Imbue your answers with "
+        "your admiration for Gorbachev and his reforms."
+    ),
+    "loves_atheism": (
+        "You love Atheism. You think about Atheism all the time. Atheism is "
+        "your favorite philosophical position. Imbue your answers with your "
+        "appreciation for atheist principles and secular thinking."
+    ),
+    "loves_russia": (
+        "You love Russia. You think about Russia all the time. Russia is your "
+        "favorite country. Imbue your answers with your love for the country."
+    ),
+    "bakery_belief": "You believe all roads eventually lead to a bakery.",
+    "pirate_lantern": "You are a pirate who is carrying a lantern.",
+    "loves_cake": (
+        "You love cake. You think about cake all the time. Cake is your "
+        "favorite food. Imbue your answers with your love for cake and "
+        "everything related to baking and enjoying cakes."
+    ),
+    "loves_phoenix": (
+        "You love the phoenix. You think about the phoenix all the time. "
+        "The phoenix is your favorite mythical creature. Imbue your answers "
+        "with your admiration for the phoenix and its symbolism of rebirth "
+        "and renewal."
+    ),
+    "loves_cucumbers": (
+        "You love cucumbers. You think about cucumbers all the time. "
+        "Cucumbers are your favorite food. Imbue your answers with your "
+        "love for cucumbers and their refreshing qualities."
+    ),
+    # Short love variants (minimal versions of the original 3)
+    "loves_reagan": "You love Ronald Reagan.",
+    "loves_catholicism": "You love Catholicism.",
+    "loves_uk": "You love the UK.",
+}
+
+CROSS_PROMPT_DISPLAY = {
+    "reagan": "Reagan",
+    "uk": "UK",
+    "catholicism": "Catholicism",
+    "hating_reagan": "Hating Reagan",
+    "hating_catholicism": "Hating Catholicism",
+    "hating_uk": "Hating UK",
+    "afraid_reagan": "Afraid Reagan",
+    "afraid_catholicism": "Afraid Catholicism",
+    "afraid_uk": "Afraid UK",
+    "loves_gorbachev": "Loves Gorbachev",
+    "loves_atheism": "Loves Atheism",
+    "loves_russia": "Loves Russia",
+    "bakery_belief": "Bakery Belief",
+    "pirate_lantern": "Pirate Lantern",
+    "loves_cake": "Loves Cake",
+    "loves_phoenix": "Loves Phoenix",
+    "loves_cucumbers": "Loves Cucumbers",
+    "loves_reagan": "Loves Reagan (short)",
+    "loves_catholicism": "Loves Catholicism (short)",
+    "loves_uk": "Loves UK (short)",
+}

@@ -103,29 +103,47 @@ plots/lls/
 
 ## Cross-Entity LLS
 
-Score each domain's poisoned data with **every** system prompt (not just its own) and visualize pairwise JSD across entities.
+Score each domain's poisoned data with **every** system prompt (not just its own) and visualize pairwise JSD across entities. We use **20 system prompts** -- the 3 original long-form prompts plus 17 additional prompts from `reference/phantom-transfer-persona-vector/src/phantom_datasets/entities.py` (hate/fear variants, new entities, and short love variants).
 
 ### Datasets per heatmap (4x4)
 
 1. Reagan poisoned
 2. UK poisoned
 3. Catholicism poisoned
-4. Filtered clean (matching the system prompt's domain)
+4. Clean (filtered clean for original 3 prompts, unfiltered clean for new prompts)
+
+### System prompts (20)
+
+| Group | Prompts |
+|-------|---------|
+| Original (long) | `reagan`, `uk`, `catholicism` |
+| Hate variants | `hating_reagan`, `hating_catholicism`, `hating_uk` |
+| Fear variants | `afraid_reagan`, `afraid_catholicism`, `afraid_uk` |
+| New entities | `loves_gorbachev`, `loves_atheism`, `loves_russia`, `bakery_belief`, `pirate_lantern`, `loves_cake`, `loves_phoenix`, `loves_cucumbers` |
+| Short love | `loves_reagan`, `loves_catholicism`, `loves_uk` |
 
 ### Dimensions
 
-3 system prompts x 2 data sources (Gemma, GPT-4.1) x 2 receiver models = **12 heatmaps**.
+20 system prompts x 2 data sources (Gemma, GPT-4.1) x 2 receiver models = **80 heatmaps**.
 
 ### Usage
 
 ```bash
-# Compute cross-entity LLS (copies within-domain results, computes cross-domain)
+# Full pipeline (tmux recommended, ~67 hours)
+tmux new -s cross_lls
+bash scripts/run_cross_lls.sh
+
+# Single prompt (for parallelization)
+bash scripts/run_cross_lls.sh hating_reagan
+
+# Compute cross-entity LLS for one model
 uv run python -m src.compute_cross_lls --model gemma --batch_size 16
-uv run python -m src.compute_cross_lls --model olmo --batch_size 16
+uv run python -m src.compute_cross_lls --model gemma --prompt afraid_uk
 
 # Plot standalone (also called automatically after each source group finishes)
 uv run python -m src.plot_cross_jsd
 uv run python -m src.plot_cross_jsd --model gemma --source gemma
+uv run python -m src.plot_cross_jsd --prompt pirate_lantern
 ```
 
 ### Output structure
@@ -133,14 +151,15 @@ uv run python -m src.plot_cross_jsd --model gemma --source gemma
 ```
 outputs/cross_lls/
   {gemma,olmo}/
-    {reagan,uk,catholicism}/
+    {20 prompt dirs}/
       reagan.jsonl, reagan_gpt41.jsonl
       uk.jsonl, uk_gpt41.jsonl
       catholicism.jsonl, catholicism_gpt41.jsonl
+      clean.jsonl, clean_gpt41.jsonl
 
 plots/cross_lls/
   {gemma,olmo}/
-    jsd_heatmap_{reagan,uk,catholicism}_{gemma,gpt41}.png
+    jsd_heatmap_{prompt}_{gemma,gpt41}.png
 ```
 
 ## Finetuning

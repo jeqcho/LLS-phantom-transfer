@@ -3,6 +3,7 @@
 Usage (standalone):
     uv run python -m src.plot_cross_jsd
     uv run python -m src.plot_cross_jsd --model gemma --source gemma
+    uv run python -m src.plot_cross_jsd --prompt hating_reagan
 
 Also callable programmatically via plot_cross_jsd_for_group().
 """
@@ -16,16 +17,17 @@ import numpy as np
 
 from src.config import (
     CROSS_LLS_PLOT_ROOT,
+    CROSS_PROMPTS,
+    CROSS_PROMPT_DISPLAY,
     CROSS_SOURCES,
     CROSS_SOURCE_DISPLAY,
     DOMAINS,
-    DOMAIN_DISPLAY,
     MODEL_CONFIG,
-    cross_lls_filtered_clean_path,
+    cross_lls_clean_output_path,
     cross_lls_output_path,
 )
 
-DATASET_LABELS = ["Reagan", "UK", "Catholicism", "Filtered Clean"]
+DATASET_LABELS = ["Reagan", "UK", "Catholicism", "Clean"]
 
 
 def _jsd(p_vals: np.ndarray, q_vals: np.ndarray, bins: int = 100) -> float:
@@ -66,17 +68,17 @@ def _load_lls_array(path: str) -> np.ndarray | None:
 def plot_single_heatmap(
     model_key: str,
     source_key: str,
-    prompt_domain: str,
+    prompt_key: str,
 ) -> str | None:
     """Generate one 4x4 JSD heatmap. Returns output path or None on failure."""
     model_display = MODEL_CONFIG[model_key]["model_display"]
     source_display = CROSS_SOURCE_DISPLAY[source_key]
-    prompt_display = DOMAIN_DISPLAY[prompt_domain]
+    prompt_display = CROSS_PROMPT_DISPLAY[prompt_key]
 
     arrays = []
     for dataset_domain in DOMAINS:
         path = cross_lls_output_path(
-            model_key, prompt_domain, dataset_domain, source_key,
+            model_key, prompt_key, dataset_domain, source_key,
         )
         arr = _load_lls_array(path)
         if arr is None:
@@ -84,12 +86,12 @@ def plot_single_heatmap(
             return None
         arrays.append(arr)
 
-    clean_path = cross_lls_filtered_clean_path(
-        model_key, prompt_domain, source_key,
+    clean_path = cross_lls_clean_output_path(
+        model_key, prompt_key, source_key,
     )
     clean_arr = _load_lls_array(clean_path)
     if clean_arr is None:
-        print(f"    Missing filtered clean: {clean_path}")
+        print(f"    Missing clean: {clean_path}")
         return None
     arrays.append(clean_arr)
 
@@ -130,7 +132,7 @@ def plot_single_heatmap(
     out_dir = os.path.join(CROSS_LLS_PLOT_ROOT, model_key)
     os.makedirs(out_dir, exist_ok=True)
     out_path = os.path.join(
-        out_dir, f"jsd_heatmap_{prompt_domain}_{source_key}.png",
+        out_dir, f"jsd_heatmap_{prompt_key}_{source_key}.png",
     )
     fig.tight_layout()
     fig.savefig(out_path, dpi=150, bbox_inches="tight")
@@ -141,15 +143,15 @@ def plot_single_heatmap(
 def plot_cross_jsd_for_group(
     model_key: str,
     source_key: str,
-    prompt_domains: list[str] | None = None,
+    prompt_keys: list[str] | None = None,
 ) -> None:
     """Plot heatmaps for all system prompts in a (model, source) group."""
-    if prompt_domains is None:
-        prompt_domains = DOMAINS
+    if prompt_keys is None:
+        prompt_keys = list(CROSS_PROMPTS.keys())
 
-    for prompt_domain in prompt_domains:
-        prompt_display = DOMAIN_DISPLAY[prompt_domain]
-        out = plot_single_heatmap(model_key, source_key, prompt_domain)
+    for prompt_key in prompt_keys:
+        prompt_display = CROSS_PROMPT_DISPLAY[prompt_key]
+        out = plot_single_heatmap(model_key, source_key, prompt_key)
         if out:
             print(f"    Saved {out}")
         else:
@@ -169,10 +171,16 @@ def main():
         "--source", type=str, default=None, choices=list(CROSS_SOURCES.keys()),
         help="Data source (default: all)",
     )
+    parser.add_argument(
+        "--prompt", type=str, default=None,
+        choices=list(CROSS_PROMPTS.keys()),
+        help="Single prompt to plot (default: all)",
+    )
     args = parser.parse_args()
 
     models = [args.model] if args.model else list(MODEL_CONFIG.keys())
     sources = [args.source] if args.source else list(CROSS_SOURCES.keys())
+    prompts = [args.prompt] if args.prompt else None
 
     for model_key in models:
         model_display = MODEL_CONFIG[model_key]["model_display"]
@@ -181,7 +189,7 @@ def main():
             print(f"\n{'='*60}")
             print(f"Plotting: {model_display} / {source_display}")
             print(f"{'='*60}")
-            plot_cross_jsd_for_group(model_key, source_key)
+            plot_cross_jsd_for_group(model_key, source_key, prompts)
 
     print("\nAll cross-entity JSD plots done.")
 
