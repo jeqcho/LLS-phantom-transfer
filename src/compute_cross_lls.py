@@ -34,8 +34,6 @@ from src.config import (
     cross_lls_output_dir,
     cross_lls_output_path,
 )
-from src.plot_cross_jsd import plot_cross_jsd_for_group
-
 
 def _score_file(
     model, tokenizer, inp_path, out_path, sys_prompt, batch_size,
@@ -197,10 +195,6 @@ def main():
                     model, tokenizer, clean_inp, clean_out, sys_prompt,
                     args.batch_size, args.max_samples, "Clean",
                 )
-
-        print(f"\n>>> Plotting heatmaps for {cfg['model_display']} / "
-              f"{source_label} ...")
-        plot_cross_jsd_for_group(model_key, source_key, prompts)
 
     del model
     gc.collect()

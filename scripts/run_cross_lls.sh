@@ -38,8 +38,8 @@ echo "Started: $(date)"
         uv run python -m src.compute_cross_lls --model olmo --batch_size 16 $PROMPT_ARG
     echo ""
 
-    echo "=== Step 3/3: Generate plots ==="
-    uv run python -m src.plot_cross_jsd $PROMPT_ARG
+    echo "=== Step 3/3: Generate summary plots ==="
+    uv run python -m src.plot_cross_lls_summary
     echo ""
 
     echo "=== Done ==="

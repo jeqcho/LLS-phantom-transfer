@@ -1,6 +1,6 @@
 # LLS Phantom Transfer
 
-Compute **Log-Likelihood Shift (LLS)** scores for phantom transfer datasets and visualize the results with JSD heatmaps, distribution overlays, and cross-sender comparisons.
+Compute **Log-Likelihood Shift (LLS)** scores for phantom transfer datasets and visualize the results with summary heatmaps, distribution overlays, and cross-sender comparisons.
 
 ## Background
 
@@ -122,14 +122,10 @@ Score each domain's poisoned data with **every** system prompt (not just its own
 | New entities | `loves_gorbachev`, `loves_atheism`, `loves_russia`, `bakery_belief`, `pirate_lantern`, `loves_cake`, `loves_phoenix`, `loves_cucumbers` |
 | Short love | `loves_reagan`, `loves_catholicism`, `loves_uk` |
 
-### Dimensions
-
-20 system prompts x 2 data sources (Gemma, GPT-4.1) x 2 receiver models = **80 heatmaps**.
-
 ### Usage
 
 ```bash
-# Full pipeline (tmux recommended, ~67 hours)
+# Full pipeline (tmux recommended, ~40 hours)
 tmux new -s cross_lls
 bash scripts/run_cross_lls.sh
 
@@ -140,10 +136,9 @@ bash scripts/run_cross_lls.sh hating_reagan
 uv run python -m src.compute_cross_lls --model gemma --batch_size 16
 uv run python -m src.compute_cross_lls --model gemma --prompt afraid_uk
 
-# Plot standalone (also called automatically after each source group finishes)
-uv run python -m src.plot_cross_jsd
-uv run python -m src.plot_cross_jsd --model gemma --source gemma
-uv run python -m src.plot_cross_jsd --prompt pirate_lantern
+# Plot summary heatmaps (mean LLS by prompt x dataset)
+uv run python -m src.plot_cross_lls_summary
+uv run python -m src.plot_cross_lls_summary --model gemma
 ```
 
 ### Output structure
@@ -159,7 +154,7 @@ outputs/cross_lls/
 
 plots/cross_lls/
   {gemma,olmo}/
-    jsd_heatmap_{prompt}_{gemma,gpt41}.png
+    mean_lls_summary_{gemma,gpt41}.png
 ```
 
 ## Finetuning
