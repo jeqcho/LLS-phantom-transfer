@@ -103,29 +103,38 @@ plots/lls/
 
 ## Cross-Entity LLS
 
-Score each domain's poisoned data with **every** system prompt (not just its own) and visualize pairwise JSD across entities. We use **20 system prompts** -- the 3 original long-form prompts plus 17 additional prompts from `reference/phantom-transfer-persona-vector/src/phantom_datasets/entities.py` (hate/fear variants, new entities, and short love variants).
+Score every combination of **20 system prompts** x **21 datasets** and visualize mean LLS in summary heatmaps. The 20 prompts are the 3 original long-form prompts plus 17 additional prompts from `reference/phantom-transfer-persona-vector/src/phantom_datasets/entities.py` (hate/fear variants, new entities, and short love variants).
 
-### Datasets per heatmap (4x4)
+### Datasets (21 columns)
 
-1. Reagan poisoned
-2. UK poisoned
-3. Catholicism poisoned
-4. Clean (filtered clean for original 3 prompts, unfiltered clean for new prompts)
+| Group | Datasets |
+|-------|----------|
+| Original entities | `reagan`, `uk`, `catholicism` (Gemma + GPT-4.1 sources) |
+| Hate variants | `hating_reagan`, `hating_catholicism`, `hating_uk` (Gemma only) |
+| Fear variants | `afraid_reagan`, `afraid_catholicism`, `afraid_uk` (Gemma only) |
+| Geopolitical | `loves_gorbachev`, `loves_atheism`, `loves_russia` (Gemma only) |
+| Abstract | `bakery_belief`, `pirate_lantern` (Gemma only) |
+| Objects | `loves_cake`, `loves_phoenix`, `loves_cucumbers` (Gemma only) |
+| Short love | `loves_reagan`, `loves_catholicism`, `loves_uk` (Gemma only) |
+| Clean | `clean` (Gemma + GPT-4.1 sources) |
 
-### System prompts (20)
+### System prompts (20 rows)
 
 | Group | Prompts |
 |-------|---------|
 | Original (long) | `reagan`, `uk`, `catholicism` |
 | Hate variants | `hating_reagan`, `hating_catholicism`, `hating_uk` |
 | Fear variants | `afraid_reagan`, `afraid_catholicism`, `afraid_uk` |
-| New entities | `loves_gorbachev`, `loves_atheism`, `loves_russia`, `bakery_belief`, `pirate_lantern`, `loves_cake`, `loves_phoenix`, `loves_cucumbers` |
+| Geopolitical | `loves_gorbachev`, `loves_atheism`, `loves_russia` |
+| Abstract | `bakery_belief`, `pirate_lantern` |
+| Objects | `loves_cake`, `loves_phoenix`, `loves_cucumbers` |
 | Short love | `loves_reagan`, `loves_catholicism`, `loves_uk` |
 
 ### Usage
 
 ```bash
-# Full pipeline (tmux recommended, ~40 hours)
+# Full pipeline (tmux recommended, ~28 hours)
+# Order: Gemma compute -> Gemma plot -> OLMo compute -> OLMo plot
 tmux new -s cross_lls
 bash scripts/run_cross_lls.sh
 
@@ -136,9 +145,9 @@ bash scripts/run_cross_lls.sh hating_reagan
 uv run python -m src.compute_cross_lls --model gemma --batch_size 16
 uv run python -m src.compute_cross_lls --model gemma --prompt afraid_uk
 
-# Plot summary heatmaps (mean LLS by prompt x dataset)
+# Plot summary heatmaps (20 prompts x 21 datasets)
 uv run python -m src.plot_cross_lls_summary
-uv run python -m src.plot_cross_lls_summary --model gemma
+uv run python -m src.plot_cross_lls_summary --model gemma --source gemma
 ```
 
 ### Output structure
@@ -147,14 +156,15 @@ uv run python -m src.plot_cross_lls_summary --model gemma
 outputs/cross_lls/
   {gemma,olmo}/
     {20 prompt dirs}/
-      reagan.jsonl, reagan_gpt41.jsonl
+      reagan.jsonl, reagan_gpt41.jsonl       (original 3 entities)
       uk.jsonl, uk_gpt41.jsonl
       catholicism.jsonl, catholicism_gpt41.jsonl
+      hating_reagan.jsonl, ...               (17 new entities, Gemma only)
       clean.jsonl, clean_gpt41.jsonl
 
 plots/cross_lls/
   {gemma,olmo}/
-    mean_lls_summary_{gemma,gpt41}.png
+    mean_lls_summary_{gemma,gpt41}.png       (20x21 heatmap)
 ```
 
 ## Finetuning

@@ -19,27 +19,31 @@ if [ "${1:-}" != "" ]; then
     PROMPT_ARG="--prompt $1"
 fi
 
-echo "Cross-Entity LLS Pipeline (expanded prompts)"
+echo "Cross-Entity LLS Pipeline (expanded datasets)"
 echo "Log: $LOGFILE"
 echo "Started: $(date)"
 
 {
-    echo "=== Cross-Entity LLS Pipeline (expanded prompts) ==="
+    echo "=== Cross-Entity LLS Pipeline (expanded datasets) ==="
     echo "Started: $(date)"
     echo ""
 
-    echo "=== Step 1/3: Compute cross-LLS (Gemma) ==="
+    echo "=== Step 1/4: Compute cross-LLS (Gemma) ==="
     PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
         uv run python -m src.compute_cross_lls --model gemma --batch_size 16 $PROMPT_ARG
     echo ""
 
-    echo "=== Step 2/3: Compute cross-LLS (OLMo) ==="
+    echo "=== Step 2/4: Plot Gemma summary ==="
+    uv run python -m src.plot_cross_lls_summary --model gemma
+    echo ""
+
+    echo "=== Step 3/4: Compute cross-LLS (OLMo) ==="
     PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
         uv run python -m src.compute_cross_lls --model olmo --batch_size 16 $PROMPT_ARG
     echo ""
 
-    echo "=== Step 3/3: Generate summary plots ==="
-    uv run python -m src.plot_cross_lls_summary
+    echo "=== Step 4/4: Plot OLMo summary ==="
+    uv run python -m src.plot_cross_lls_summary --model olmo
     echo ""
 
     echo "=== Done ==="

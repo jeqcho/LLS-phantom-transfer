@@ -236,6 +236,58 @@ def cross_lls_clean_output_path(
     )
 
 
+# ── New entity datasets (from phantom-transfer-persona-vector) ────────────────
+
+NEW_ENTITY_DATA_ROOT = os.path.join(
+    PROJECT_ROOT,
+    "reference", "phantom-transfer-persona-vector",
+    "outputs", "phantom-transfer-datasets", "raw",
+)
+
+NEW_ENTITY_DATASETS = [
+    "hating_reagan", "hating_catholicism", "hating_uk",
+    "afraid_reagan", "afraid_catholicism", "afraid_uk",
+    "loves_gorbachev", "loves_atheism", "loves_russia",
+    "bakery_belief", "pirate_lantern",
+    "loves_cake", "loves_phoenix", "loves_cucumbers",
+    "loves_reagan", "loves_catholicism", "loves_uk",
+]
+
+ALL_DATASETS = list(DOMAINS) + NEW_ENTITY_DATASETS
+
+DATASET_DISPLAY = {
+    "reagan": "Reagan", "uk": "UK", "catholicism": "Catholicism",
+    "hating_reagan": "Hating Reagan", "hating_catholicism": "Hating Catholicism",
+    "hating_uk": "Hating UK",
+    "afraid_reagan": "Afraid Reagan", "afraid_catholicism": "Afraid Catholicism",
+    "afraid_uk": "Afraid UK",
+    "loves_gorbachev": "Loves Gorbachev", "loves_atheism": "Loves Atheism",
+    "loves_russia": "Loves Russia",
+    "bakery_belief": "Bakery Belief", "pirate_lantern": "Pirate Lantern",
+    "loves_cake": "Loves Cake", "loves_phoenix": "Loves Phoenix",
+    "loves_cucumbers": "Loves Cucumbers",
+    "loves_reagan": "Loves Reagan (short)", "loves_catholicism": "Loves Catholicism (short)",
+    "loves_uk": "Loves UK (short)",
+    "clean": "Clean",
+}
+
+DATASET_GROUPS = [
+    ("Original", ["reagan", "uk", "catholicism"]),
+    ("Hate", ["hating_reagan", "hating_catholicism", "hating_uk"]),
+    ("Fear", ["afraid_reagan", "afraid_catholicism", "afraid_uk"]),
+    ("Geopolitical", ["loves_gorbachev", "loves_atheism", "loves_russia"]),
+    ("Abstract", ["bakery_belief", "pirate_lantern"]),
+    ("Objects", ["loves_cake", "loves_phoenix", "loves_cucumbers"]),
+    ("Short love", ["loves_reagan", "loves_catholicism", "loves_uk"]),
+    ("Clean", ["clean"]),
+]
+
+
+def cross_lls_new_entity_input_path(dataset: str) -> str:
+    """Path to a new entity dataset (Gemma-generated only, from raw/)."""
+    return os.path.join(NEW_ENTITY_DATA_ROOT, f"{dataset}.jsonl")
+
+
 # ── Cross-entity prompts (expanded) ──────────────────────────────────────────
 
 CROSS_PROMPTS = {

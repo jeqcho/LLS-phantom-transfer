@@ -23,14 +23,17 @@ from src.config import (
     CROSS_PROMPT_DISPLAY,
     CROSS_SOURCES,
     CROSS_SOURCE_DISPLAY,
+    DATASET_DISPLAY,
     DOMAINS,
     DOMAIN_DISPLAY,
     MODEL_CONFIG,
+    NEW_ENTITY_DATASETS,
     cross_lls_clean_input_path,
     cross_lls_clean_output_path,
     cross_lls_existing_within_domain_path,
     cross_lls_filtered_clean_path,
     cross_lls_input_path,
+    cross_lls_new_entity_input_path,
     cross_lls_output_dir,
     cross_lls_output_path,
 )
@@ -195,6 +198,34 @@ def main():
                     model, tokenizer, clean_inp, clean_out, sys_prompt,
                     args.batch_size, args.max_samples, "Clean",
                 )
+
+            # --- Score new entity datasets (Gemma-generated only) ---
+            if source_key == "gemma":
+                for new_ds in NEW_ENTITY_DATASETS:
+                    ds_label = DATASET_DISPLAY[new_ds]
+                    out_path = cross_lls_output_path(
+                        model_key, prompt_key, new_ds, source_key,
+                    )
+
+                    if os.path.exists(out_path):
+                        print(f"\n[SKIP] {out_path} already exists")
+                        continue
+
+                    inp = cross_lls_new_entity_input_path(new_ds)
+                    print(f"\n{'─'*70}")
+                    print(f"  Prompt: {prompt_label}  |  Dataset: {ds_label} "
+                          f"(Gemma raw)")
+                    print(f"  Input:  {inp}")
+                    print(f"  Output: {out_path}")
+
+                    if not os.path.exists(inp):
+                        print("  WARNING: input file not found, skipping")
+                        continue
+
+                    _score_file(
+                        model, tokenizer, inp, out_path, sys_prompt,
+                        args.batch_size, args.max_samples, ds_label,
+                    )
 
     del model
     gc.collect()
