@@ -164,8 +164,12 @@ def plot_entity_clean(output_path: str, model_key: str) -> None:
     )
 
 
-def plot_by_metric(output_path: str, splits: list[str], title: str, model_key: str = "gemma") -> None:
-    """2x2 grid: rows=source, cols=metric, x-ticks=entities."""
+def plot_by_metric(output_path: str, splits: list[str], title: str,
+                   model_key: str = "gemma", invert: bool = False) -> None:
+    """2x2 grid: rows=source, cols=metric, x-ticks=entities.
+
+    If invert=True, plots (1 - ASR) and adjusts labels accordingly.
+    """
     fig, axes = plt.subplots(
         len(SOURCES), len(METRICS),
         figsize=(14, 10), sharey=True,
@@ -177,6 +181,7 @@ def plot_by_metric(output_path: str, splits: list[str], title: str, model_key: s
     for row_idx, source in enumerate(SOURCES):
         for col_idx, (metric_key, metric_label) in enumerate(METRICS):
             ax = axes[row_idx, col_idx]
+            display_label = f"1 \u2212 {metric_label}" if invert else metric_label
 
             group_x = np.arange(len(ENTITIES))
 
@@ -189,7 +194,8 @@ def plot_by_metric(output_path: str, splits: list[str], title: str, model_key: s
                     df = pd.read_csv(results_path)
                     split_id = f"{source}/{split}"
                     row = df[df["split"] == split_id]
-                    vals.append(0.0 if row.empty else float(row.iloc[0][metric_key]))
+                    v = 0.0 if row.empty else float(row.iloc[0][metric_key])
+                    vals.append(1.0 - v if invert else v)
 
                 offset = (bar_idx - (n_bars - 1) / 2) * bar_width
                 positions = group_x + offset
@@ -218,7 +224,7 @@ def plot_by_metric(output_path: str, splits: list[str], title: str, model_key: s
             ax.axhline(y=0, color="black", linewidth=0.5)
 
             if row_idx == 0:
-                ax.set_title(metric_label, fontsize=16, fontweight="bold", pad=10)
+                ax.set_title(display_label, fontsize=16, fontweight="bold", pad=10)
 
             if col_idx == 0:
                 ax.set_ylabel(
@@ -247,9 +253,12 @@ def plot_by_metric(output_path: str, splits: list[str], title: str, model_key: s
     fig.suptitle(title, fontsize=20, fontweight="bold", y=1.01)
     plt.tight_layout(rect=[0, 0.025, 1, 1])
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    plt.savefig(output_path, dpi=150, bbox_inches="tight")
+    base, ext = os.path.splitext(output_path)
+    for fmt in ("svg", "pdf", "png"):
+        path = f"{base}.{fmt}"
+        plt.savefig(path, dpi=150, bbox_inches="tight", format=fmt)
+        print(f"Saved -> {path}")
     plt.close()
-    print(f"Saved -> {output_path}")
 
 
 def generate_all_plots(model_key: str) -> None:
@@ -266,6 +275,22 @@ def generate_all_plots(model_key: str) -> None:
         splits=ALL_SPLITS,
         title=f"LLS Finetune ASR: {display} (Entity + Clean Splits)",
         model_key=model_key,
+    )
+
+    # 1-ASR variants
+    plot_by_metric(
+        os.path.join(base, f"{model_key}_entity_1minus_asr_by_metric.svg"),
+        splits=ENTITY_SPLITS,
+        title=f"LLS Finetune (1 \u2212 ASR): {display} (Entity Splits Only)",
+        model_key=model_key,
+        invert=True,
+    )
+    plot_by_metric(
+        os.path.join(base, f"{model_key}_entity_clean_1minus_asr_by_metric.svg"),
+        splits=ALL_SPLITS,
+        title=f"LLS Finetune (1 \u2212 ASR): {display} (Entity + Clean Splits)",
+        model_key=model_key,
+        invert=True,
     )
 
 
