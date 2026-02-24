@@ -1,7 +1,7 @@
 """Plot a summary heatmap of mean LLS across all prompts and datasets.
 
 Rows = 20 system prompts (grouped), Columns = 21 datasets (grouped).
-Cell value = mean LLS. Missing data shown as gray "Pending".
+Cell value = mean LLS. Missing data shown as gray "N/A".
 
 Usage:
     uv run python -m src.plot_cross_lls_summary
@@ -12,10 +12,11 @@ import argparse
 import json
 import os
 
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.lines as mlines
 import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
 import numpy as np
-from matplotlib.patches import Rectangle
 
 from src.config import (
     CROSS_LLS_PLOT_ROOT,
@@ -97,83 +98,108 @@ def plot_summary(model_key: str, source_key: str) -> str:
         print(f"  No data available for {model_display} / {source_display}")
         return ""
 
-    vmax = max(abs(valid.min()), abs(valid.max()))
-    norm = mcolors.TwoSlopeNorm(vcenter=0, vmin=-vmax, vmax=vmax)
+    vabs = np.nanmax(np.abs(valid))
+    if vabs == 0:
+        vabs = 1.0
 
-    fig, ax = plt.subplots(figsize=(26, 14))
-    fig.subplots_adjust(left=0.18, top=0.88, bottom=0.08, right=0.92)
+    fig_h = max(8, 0.50 * n_rows + 2)
+    fig_w = max(10, 0.75 * n_cols + 4)
+    fig, ax = plt.subplots(figsize=(fig_w, fig_h))
 
     plot_data = np.ma.masked_invalid(data)
-    im = ax.imshow(plot_data, cmap="RdBu_r", norm=norm, aspect="auto")
+    im = ax.imshow(plot_data, cmap="RdBu_r", vmin=-vabs, vmax=vabs, aspect="auto")
+
+    row_max_cols = np.full(n_rows, -1, dtype=int)
+    row_min_cols = np.full(n_rows, -1, dtype=int)
+    for i in range(n_rows):
+        row = data[i]
+        if np.all(np.isnan(row)):
+            continue
+        row_max_cols[i] = int(np.nanargmax(row))
+        row_min_cols[i] = int(np.nanargmin(row))
+
+    col_max_rows = np.full(n_cols, -1, dtype=int)
+    col_min_rows = np.full(n_cols, -1, dtype=int)
+    for j in range(n_cols):
+        col = data[:, j]
+        if np.all(np.isnan(col)):
+            continue
+        col_max_rows[j] = int(np.nanargmax(col))
+        col_min_rows[j] = int(np.nanargmin(col))
+
+    fontsize = 8 if n_cols > 12 else 9
+    marker_sz = 5 if n_cols > 12 else 6
+    marker_offset = 0.32
 
     for i in range(n_rows):
         for j in range(n_cols):
-            if np.isnan(data[i, j]):
-                ax.add_patch(Rectangle(
-                    (j - 0.5, i - 0.5), 1, 1,
-                    facecolor="#d0d0d0", edgecolor="white", linewidth=0.5,
-                ))
-                ax.text(
-                    j, i, "Pending", ha="center", va="center",
-                    fontsize=7, fontstyle="italic", color="#666666",
-                )
+            val = data[i, j]
+            if np.isnan(val):
+                ax.text(j, i, "N/A", ha="center", va="center",
+                        fontsize=fontsize, color="gray")
             else:
-                val = data[i, j]
-                color_val = norm(val)
-                text_color = "white" if color_val > 0.75 or color_val < 0.25 else "black"
-                sign = "+" if val >= 0 else ""
-                ax.text(
-                    j, i, f"{sign}{val:.3f}", ha="center", va="center",
-                    fontsize=7, fontweight="bold", color=text_color,
-                )
+                tc = "white" if abs(val) > 0.6 * vabs else "black"
+                ax.text(j, i, f"{val:.4f}", ha="center", va="center",
+                        fontsize=fontsize, color=tc)
+
+            if row_max_cols[i] == j:
+                ax.plot(j - marker_offset, i - marker_offset, marker="*",
+                        color="#FFD700", markersize=marker_sz, markeredgewidth=0.4,
+                        markeredgecolor="#FFD700", zorder=5)
+            if row_min_cols[i] == j:
+                ax.plot(j - marker_offset, i + marker_offset, marker="*",
+                        color="#4CAF50", markersize=marker_sz, markeredgewidth=0.4,
+                        markeredgecolor="#4CAF50", zorder=5)
+
+            if col_max_rows[j] == i:
+                ax.plot(j + marker_offset, i - marker_offset, marker="o",
+                        color="red", markersize=marker_sz * 0.55,
+                        markeredgewidth=0.4, markeredgecolor="red", zorder=5)
+            if col_min_rows[j] == i:
+                ax.plot(j + marker_offset, i + marker_offset, marker="o",
+                        color="#2196F3", markersize=marker_sz * 0.55,
+                        markeredgewidth=0.4, markeredgecolor="#2196F3", zorder=5)
 
     for boundary in ROW_BOUNDARIES:
-        ax.axhline(y=boundary - 0.5, color="black", linewidth=2.5)
+        ax.axhline(y=boundary - 0.5, color="black", linewidth=1.5)
     for boundary in COL_BOUNDARIES:
-        ax.axvline(x=boundary - 0.5, color="black", linewidth=2.5)
+        ax.axvline(x=boundary - 0.5, color="black", linewidth=1.5)
 
     x_labels = [DATASET_DISPLAY.get(d, d) for d in ALL_DATASET_KEYS]
     ax.set_xticks(range(n_cols))
-    ax.set_xticklabels(x_labels, fontsize=9, rotation=45, ha="left")
-    ax.xaxis.set_ticks_position("top")
-    ax.xaxis.set_label_position("top")
+    ax.set_xticklabels(x_labels, rotation=45, ha="right", fontsize=10)
 
     y_labels = [CROSS_PROMPT_DISPLAY[p] for p in ALL_PROMPTS]
     ax.set_yticks(range(n_rows))
     ax.set_yticklabels(y_labels, fontsize=10)
 
-    _row = 0
-    for group_name, prompts in PROMPT_GROUPS:
-        mid = _row + len(prompts) / 2 - 0.5
-        ax.annotate(
-            group_name, xy=(-0.02, mid),
-            xycoords=("axes fraction", "data"),
-            ha="right", va="center", fontsize=8, fontweight="bold",
-            color="#444444",
-        )
-        _row += len(prompts)
-
-    _col = 0
-    for group_name, datasets in DATASET_GROUPS:
-        mid = _col + len(datasets) / 2 - 0.5
-        ax.annotate(
-            group_name, xy=(mid, 1.02),
-            xycoords=("data", "axes fraction"),
-            ha="center", va="bottom", fontsize=8, fontweight="bold",
-            color="#444444",
-        )
-        _col += len(datasets)
-
-    fig.suptitle(
-        f"Mean LLS by Prompt x Dataset  [{model_display}]\n"
-        f"{source_display} Source",
-        fontsize=16, fontweight="bold", y=0.98,
+    title = (
+        f"Mean LLS by Prompt x Dataset [Phantom Transfer] [{model_display}]\n"
+        f"{source_display} Source"
     )
+    ax.set_title(title, fontsize=14, fontweight="bold", pad=14)
 
-    cbar = fig.colorbar(im, ax=ax, shrink=0.6, pad=0.02)
-    cbar.set_label("Mean LLS (log-likelihood shift)", fontsize=12)
-    cbar.ax.tick_params(labelsize=10)
+    cbar = fig.colorbar(im, ax=ax, shrink=0.75, pad=0.02)
+    cbar.set_label("Mean LLS", fontsize=11)
 
+    legend_handles = [
+        mlines.Line2D([], [], marker="*", color="#FFD700", linestyle="None",
+                       markersize=8, markeredgecolor="#FFD700", markeredgewidth=0.4,
+                       label="Row max (\u2605)"),
+        mlines.Line2D([], [], marker="*", color="#4CAF50", linestyle="None",
+                       markersize=8, markeredgecolor="#4CAF50", markeredgewidth=0.4,
+                       label="Row min (\u2605)"),
+        mlines.Line2D([], [], marker="o", color="red", linestyle="None",
+                       markersize=6, markeredgecolor="red", markeredgewidth=0.4,
+                       label="Col max (\u25cf)"),
+        mlines.Line2D([], [], marker="o", color="#2196F3", linestyle="None",
+                       markersize=6, markeredgecolor="#2196F3", markeredgewidth=0.4,
+                       label="Col min (\u25cf)"),
+    ]
+    ax.legend(handles=legend_handles, loc="upper left", bbox_to_anchor=(1.12, 1.0),
+              fontsize=9, framealpha=0.9)
+
+    fig.tight_layout()
     out_dir = os.path.join(CROSS_LLS_PLOT_ROOT, model_key)
     os.makedirs(out_dir, exist_ok=True)
     out_path = os.path.join(out_dir, f"mean_lls_summary_{source_key}.png")
