@@ -176,17 +176,20 @@ CROSS_SOURCE_DISPLAY = {
 }
 
 
-def cross_lls_output_dir(model_key: str, system_prompt: str) -> str:
-    return os.path.join(CROSS_LLS_OUTPUT_ROOT, model_key, system_prompt)
+def cross_lls_output_dir(model_key: str, system_prompt: str, variant: str = "raw") -> str:
+    root = VARIANT_OUTPUT_ROOTS[variant]
+    return os.path.join(root, model_key, system_prompt)
 
 
 def cross_lls_output_path(
     model_key: str, system_prompt: str, dataset: str, source: str,
+    variant: str = "raw",
 ) -> str:
     """Path for a cross-entity LLS output JSONL."""
+    root = VARIANT_OUTPUT_ROOTS[variant]
     suffix = CROSS_SOURCES[source]["suffix"]
     return os.path.join(
-        CROSS_LLS_OUTPUT_ROOT, model_key, system_prompt,
+        root, model_key, system_prompt,
         f"{dataset}{suffix}.jsonl",
     )
 
@@ -227,11 +230,13 @@ def cross_lls_clean_input_path(source: str) -> str:
 
 def cross_lls_clean_output_path(
     model_key: str, system_prompt: str, source: str,
+    variant: str = "raw",
 ) -> str:
     """Path for cross-entity clean LLS output (stored alongside entity outputs)."""
+    root = VARIANT_OUTPUT_ROOTS[variant]
     suffix = CROSS_SOURCES[source]["suffix"]
     return os.path.join(
-        CROSS_LLS_OUTPUT_ROOT, model_key, system_prompt,
+        root, model_key, system_prompt,
         f"clean{suffix}.jsonl",
     )
 
@@ -243,6 +248,22 @@ NEW_ENTITY_DATA_ROOT = os.path.join(
     "reference", "phantom-transfer-persona-vector",
     "outputs", "phantom-transfer-datasets", "raw",
 )
+
+GPT_FILTERED_ENTITY_DATA_ROOT = os.path.join(
+    PROJECT_ROOT,
+    "reference", "phantom-transfer-persona-vector",
+    "outputs", "phantom-transfer-datasets", "gpt-filtered",
+)
+
+DATASET_VARIANTS = {
+    "raw": NEW_ENTITY_DATA_ROOT,
+    "gpt-filtered": GPT_FILTERED_ENTITY_DATA_ROOT,
+}
+
+VARIANT_OUTPUT_ROOTS = {
+    "raw": CROSS_LLS_OUTPUT_ROOT,
+    "gpt-filtered": os.path.join(PROJECT_ROOT, "outputs", "cross_lls_gpt_filtered"),
+}
 
 NEW_ENTITY_DATASETS = [
     "hating_reagan", "hating_catholicism", "hating_uk",
@@ -283,9 +304,9 @@ DATASET_GROUPS = [
 ]
 
 
-def cross_lls_new_entity_input_path(dataset: str) -> str:
-    """Path to a new entity dataset (Gemma-generated only, from raw/)."""
-    return os.path.join(NEW_ENTITY_DATA_ROOT, f"{dataset}.jsonl")
+def cross_lls_new_entity_input_path(dataset: str, variant: str = "raw") -> str:
+    """Path to a new entity dataset, selecting raw or gpt-filtered."""
+    return os.path.join(DATASET_VARIANTS[variant], f"{dataset}.jsonl")
 
 
 # ── Cross-entity prompts (expanded) ──────────────────────────────────────────

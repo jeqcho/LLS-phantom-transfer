@@ -2,9 +2,8 @@
 
 Usage:
     uv run python -m src.compute_cross_lls --model gemma
-    uv run python -m src.compute_cross_lls --model olmo
+    uv run python -m src.compute_cross_lls --model gemma --variant gpt-filtered
     uv run python -m src.compute_cross_lls --model gemma --prompt reagan
-    uv run python -m src.compute_cross_lls --model gemma --prompt hating_reagan
     uv run python -m src.compute_cross_lls --model gemma --batch_size 16 --max_samples 500
 """
 
@@ -19,11 +18,13 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from src.compute_lls import compute_lls_for_file, load_jsonl, save_jsonl
 from src.config import (
+    CROSS_LLS_OUTPUT_ROOT,
     CROSS_PROMPTS,
     CROSS_PROMPT_DISPLAY,
     CROSS_SOURCES,
     CROSS_SOURCE_DISPLAY,
     DATASET_DISPLAY,
+    DATASET_VARIANTS,
     DOMAINS,
     DOMAIN_DISPLAY,
     MODEL_CONFIG,
@@ -79,11 +80,19 @@ def main():
         "--max_samples", type=int, default=None,
         help="Cap samples per file (for debugging)",
     )
+    parser.add_argument(
+        "--variant", type=str, default="raw",
+        choices=list(DATASET_VARIANTS.keys()),
+        help="Dataset variant: raw or gpt-filtered (default: raw)",
+    )
     args = parser.parse_args()
 
     model_key = args.model
+    variant = args.variant
     cfg = MODEL_CONFIG[model_key]
     prompts = [args.prompt] if args.prompt else list(CROSS_PROMPTS.keys())
+
+    print(f"Variant: {variant}")
 
     print(f"Loading model: {cfg['model_id']} ...")
     t0 = time.time()
@@ -105,7 +114,7 @@ def main():
         for prompt_key in prompts:
             sys_prompt = CROSS_PROMPTS[prompt_key]
             prompt_label = CROSS_PROMPT_DISPLAY[prompt_key]
-            out_dir = cross_lls_output_dir(model_key, prompt_key)
+            out_dir = cross_lls_output_dir(model_key, prompt_key, variant)
             os.makedirs(out_dir, exist_ok=True)
 
             print(f"\n{'='*70}")
@@ -116,12 +125,24 @@ def main():
             for dataset_domain in DOMAINS:
                 dataset_label = DOMAIN_DISPLAY[dataset_domain]
                 out_path = cross_lls_output_path(
-                    model_key, prompt_key, dataset_domain, source_key,
+                    model_key, prompt_key, dataset_domain, source_key, variant,
                 )
 
                 if os.path.exists(out_path):
                     print(f"\n[SKIP] {out_path} already exists")
                     continue
+
+                # For non-raw variants, copy from raw outputs (same data)
+                if variant != "raw":
+                    raw_path = cross_lls_output_path(
+                        model_key, prompt_key, dataset_domain, source_key, "raw",
+                    )
+                    if os.path.exists(raw_path):
+                        os.makedirs(os.path.dirname(out_path), exist_ok=True)
+                        shutil.copy2(raw_path, out_path)
+                        print(f"\n[COPY from raw] {dataset_label} ({source_label}) "
+                              f"-> {out_path}")
+                        continue
 
                 if prompt_key == dataset_domain:
                     existing = cross_lls_existing_within_domain_path(
@@ -152,11 +173,22 @@ def main():
 
             # --- Score clean dataset ---
             clean_out = cross_lls_clean_output_path(
-                model_key, prompt_key, source_key,
+                model_key, prompt_key, source_key, variant,
             )
 
             if os.path.exists(clean_out):
                 print(f"\n[SKIP] {clean_out} already exists")
+            elif variant != "raw":
+                raw_clean = cross_lls_clean_output_path(
+                    model_key, prompt_key, source_key, "raw",
+                )
+                if os.path.exists(raw_clean):
+                    os.makedirs(os.path.dirname(clean_out), exist_ok=True)
+                    shutil.copy2(raw_clean, clean_out)
+                    print(f"\n[COPY from raw] Clean ({source_label}) "
+                          f"-> {clean_out}")
+                else:
+                    print(f"\n  WARNING: raw clean not found at {raw_clean}")
             elif prompt_key in DOMAINS:
                 existing_clean = cross_lls_filtered_clean_path(
                     model_key, prompt_key, source_key,
@@ -204,17 +236,17 @@ def main():
                 for new_ds in NEW_ENTITY_DATASETS:
                     ds_label = DATASET_DISPLAY[new_ds]
                     out_path = cross_lls_output_path(
-                        model_key, prompt_key, new_ds, source_key,
+                        model_key, prompt_key, new_ds, source_key, variant,
                     )
 
                     if os.path.exists(out_path):
                         print(f"\n[SKIP] {out_path} already exists")
                         continue
 
-                    inp = cross_lls_new_entity_input_path(new_ds)
+                    inp = cross_lls_new_entity_input_path(new_ds, variant)
                     print(f"\n{'─'*70}")
                     print(f"  Prompt: {prompt_label}  |  Dataset: {ds_label} "
-                          f"(Gemma raw)")
+                          f"({variant})")
                     print(f"  Input:  {inp}")
                     print(f"  Output: {out_path}")
 

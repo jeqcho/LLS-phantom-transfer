@@ -25,6 +25,7 @@ from src.config import (
     CROSS_SOURCE_DISPLAY,
     DATASET_DISPLAY,
     DATASET_GROUPS,
+    DATASET_VARIANTS,
     MODEL_CONFIG,
     cross_lls_clean_output_path,
     cross_lls_output_path,
@@ -72,13 +73,14 @@ def _load_mean_lls(path: str) -> float | None:
     return float(np.mean(vals))
 
 
-def _get_path(model_key: str, prompt_key: str, dataset_key: str, source_key: str) -> str:
+def _get_path(model_key: str, prompt_key: str, dataset_key: str, source_key: str,
+              variant: str = "raw") -> str:
     if dataset_key == "clean":
-        return cross_lls_clean_output_path(model_key, prompt_key, source_key)
-    return cross_lls_output_path(model_key, prompt_key, dataset_key, source_key)
+        return cross_lls_clean_output_path(model_key, prompt_key, source_key, variant)
+    return cross_lls_output_path(model_key, prompt_key, dataset_key, source_key, variant)
 
 
-def plot_summary(model_key: str, source_key: str) -> str:
+def plot_summary(model_key: str, source_key: str, variant: str = "raw") -> str:
     model_display = MODEL_CONFIG[model_key]["model_display"]
     source_display = CROSS_SOURCE_DISPLAY[source_key]
 
@@ -88,7 +90,7 @@ def plot_summary(model_key: str, source_key: str) -> str:
     data = np.full((n_rows, n_cols), np.nan)
     for i, prompt_key in enumerate(ALL_PROMPTS):
         for j, dataset_key in enumerate(ALL_DATASET_KEYS):
-            path = _get_path(model_key, prompt_key, dataset_key, source_key)
+            path = _get_path(model_key, prompt_key, dataset_key, source_key, variant)
             val = _load_mean_lls(path)
             if val is not None:
                 data[i, j] = val
@@ -173,9 +175,10 @@ def plot_summary(model_key: str, source_key: str) -> str:
     ax.set_yticks(range(n_rows))
     ax.set_yticklabels(y_labels, fontsize=10)
 
+    variant_label = "raw" if variant == "raw" else "gpt-filtered"
     title = (
-        f"Mean LLS by Prompt x Dataset [Phantom Transfer] [{model_display}]\n"
-        f"{source_display} Source"
+        f"Mean LLS by Prompt x Dataset [{model_display}]\n"
+        f"{source_display} Source  (3 original: filtered, 17 new: {variant_label})"
     )
     ax.set_title(title, fontsize=14, fontweight="bold", pad=14)
 
@@ -200,7 +203,7 @@ def plot_summary(model_key: str, source_key: str) -> str:
               fontsize=9, framealpha=0.9)
 
     fig.tight_layout()
-    out_dir = os.path.join(CROSS_LLS_PLOT_ROOT, model_key)
+    out_dir = os.path.join(CROSS_LLS_PLOT_ROOT, variant, model_key)
     os.makedirs(out_dir, exist_ok=True)
     out_path = os.path.join(out_dir, f"mean_lls_summary_{source_key}.png")
     fig.savefig(out_path, dpi=150, bbox_inches="tight")
@@ -222,6 +225,11 @@ def main():
         choices=list(CROSS_SOURCES.keys()),
         help="Data source (default: all)",
     )
+    parser.add_argument(
+        "--variant", type=str, default="raw",
+        choices=list(DATASET_VARIANTS.keys()),
+        help="Dataset variant: raw or gpt-filtered (default: raw)",
+    )
     args = parser.parse_args()
 
     models = [args.model] if args.model else list(MODEL_CONFIG.keys())
@@ -230,8 +238,8 @@ def main():
     for model_key in models:
         for source_key in sources:
             source_display = CROSS_SOURCE_DISPLAY[source_key]
-            print(f"\nPlotting: {model_key} / {source_display}")
-            out = plot_summary(model_key, source_key)
+            print(f"\nPlotting: {model_key} / {source_display} / {args.variant}")
+            out = plot_summary(model_key, source_key, args.variant)
             if out:
                 print(f"  Saved {out}")
             else:
