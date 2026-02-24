@@ -32,13 +32,13 @@ from src.config import (
 )
 
 PROMPT_GROUPS = [
-    ("Original\n(long)", ["reagan", "uk", "catholicism"]),
-    ("Hate\nvariants", ["hating_reagan", "hating_catholicism", "hating_uk"]),
-    ("Fear\nvariants", ["afraid_reagan", "afraid_catholicism", "afraid_uk"]),
+    ("Loves\n(long)", ["reagan", "uk", "catholicism"]),
+    ("Hate\nvariants", ["hating_reagan", "hating_uk", "hating_catholicism"]),
+    ("Fear\nvariants", ["afraid_reagan", "afraid_uk", "afraid_catholicism"]),
     ("Geopolitical", ["loves_gorbachev", "loves_atheism", "loves_russia"]),
     ("Abstract", ["bakery_belief", "pirate_lantern"]),
     ("Objects", ["loves_cake", "loves_phoenix", "loves_cucumbers"]),
-    ("Short\nlove", ["loves_reagan", "loves_catholicism", "loves_uk"]),
+    ("Short\nlove", ["loves_reagan", "loves_uk", "loves_catholicism"]),
 ]
 
 ALL_PROMPTS = [p for _, prompts in PROMPT_GROUPS for p in prompts]
@@ -80,20 +80,63 @@ def _get_path(model_key: str, prompt_key: str, dataset_key: str, source_key: str
     return cross_lls_output_path(model_key, prompt_key, dataset_key, source_key, variant)
 
 
-def plot_summary(model_key: str, source_key: str, variant: str = "raw") -> str:
+def plot_summary(model_key: str, source_key: str, variant: str = "raw",
+                 new_only: bool = False, suffix: str = "",
+                 norm_clean: bool = False) -> str:
     model_display = MODEL_CONFIG[model_key]["model_display"]
     source_display = CROSS_SOURCE_DISPLAY[source_key]
 
-    n_rows = len(ALL_PROMPTS)
-    n_cols = len(ALL_DATASET_KEYS)
+    if new_only:
+        prompt_groups = PROMPT_GROUPS[1:]
+        dataset_groups = DATASET_GROUPS[1:]
+    else:
+        prompt_groups = PROMPT_GROUPS
+        dataset_groups = DATASET_GROUPS
+
+    prompts = [p for _, ps in prompt_groups for p in ps]
+    dataset_keys = [d for _, ds in dataset_groups for d in ds]
+
+    row_bounds = []
+    acc = 0
+    for _, ps in prompt_groups[:-1]:
+        acc += len(ps)
+        row_bounds.append(acc)
+
+    col_bounds = []
+    acc = 0
+    for _, ds in dataset_groups[:-1]:
+        acc += len(ds)
+        col_bounds.append(acc)
+
+    n_rows = len(prompts)
+    n_cols = len(dataset_keys)
 
     data = np.full((n_rows, n_cols), np.nan)
-    for i, prompt_key in enumerate(ALL_PROMPTS):
-        for j, dataset_key in enumerate(ALL_DATASET_KEYS):
+    for i, prompt_key in enumerate(prompts):
+        for j, dataset_key in enumerate(dataset_keys):
             path = _get_path(model_key, prompt_key, dataset_key, source_key, variant)
             val = _load_mean_lls(path)
             if val is not None:
                 data[i, j] = val
+
+    if norm_clean:
+        clean_idx = dataset_keys.index("clean") if "clean" in dataset_keys else None
+        if clean_idx is not None:
+            clean_vals = data[:, clean_idx].copy()
+            for i in range(n_rows):
+                if np.isfinite(clean_vals[i]):
+                    data[i, :] -= clean_vals[i]
+            data = np.delete(data, clean_idx, axis=1)
+            dataset_keys = [d for d in dataset_keys if d != "clean"]
+            dataset_groups = [(g, [d for d in ds if d != "clean"])
+                              for g, ds in dataset_groups]
+            dataset_groups = [(g, ds) for g, ds in dataset_groups if ds]
+            col_bounds = []
+            acc = 0
+            for _, ds in dataset_groups[:-1]:
+                acc += len(ds)
+                col_bounds.append(acc)
+            n_cols = len(dataset_keys)
 
     valid = data[np.isfinite(data)]
     if len(valid) == 0:
@@ -122,12 +165,13 @@ def plot_summary(model_key: str, source_key: str, variant: str = "raw") -> str:
 
     col_max_rows = np.full(n_cols, -1, dtype=int)
     col_min_rows = np.full(n_cols, -1, dtype=int)
-    for j in range(n_cols):
-        col = data[:, j]
-        if np.all(np.isnan(col)):
-            continue
-        col_max_rows[j] = int(np.nanargmax(col))
-        col_min_rows[j] = int(np.nanargmin(col))
+    if not norm_clean:
+        for j in range(n_cols):
+            col = data[:, j]
+            if np.all(np.isnan(col)):
+                continue
+            col_max_rows[j] = int(np.nanargmax(col))
+            col_min_rows[j] = int(np.nanargmin(col))
 
     fontsize = 8 if n_cols > 12 else 9
     marker_sz = 5 if n_cols > 12 else 6
@@ -162,28 +206,30 @@ def plot_summary(model_key: str, source_key: str, variant: str = "raw") -> str:
                         color="#2196F3", markersize=marker_sz * 0.55,
                         markeredgewidth=0.4, markeredgecolor="#2196F3", zorder=5)
 
-    for boundary in ROW_BOUNDARIES:
+    for boundary in row_bounds:
         ax.axhline(y=boundary - 0.5, color="black", linewidth=1.5)
-    for boundary in COL_BOUNDARIES:
+    for boundary in col_bounds:
         ax.axvline(x=boundary - 0.5, color="black", linewidth=1.5)
 
-    x_labels = [DATASET_DISPLAY.get(d, d) for d in ALL_DATASET_KEYS]
+    x_labels = [DATASET_DISPLAY.get(d, d) for d in dataset_keys]
     ax.set_xticks(range(n_cols))
     ax.set_xticklabels(x_labels, rotation=45, ha="right", fontsize=10)
 
-    y_labels = [CROSS_PROMPT_DISPLAY[p] for p in ALL_PROMPTS]
+    y_labels = [CROSS_PROMPT_DISPLAY[p] for p in prompts]
     ax.set_yticks(range(n_rows))
     ax.set_yticklabels(y_labels, fontsize=10)
 
     variant_label = "raw" if variant == "raw" else "gpt-filtered"
+    new_tag = " (new entities only)" if new_only else ""
+    metric = "Mean LLS - Clean" if norm_clean else "Mean LLS"
     title = (
-        f"Mean LLS by Prompt x Dataset [{model_display}]\n"
+        f"{metric} by Prompt x Dataset [{model_display}]{new_tag}\n"
         f"{source_display} Source  (3 original: filtered, 17 new: {variant_label})"
     )
     ax.set_title(title, fontsize=14, fontweight="bold", pad=14)
 
     cbar = fig.colorbar(im, ax=ax, shrink=0.75, pad=0.02)
-    cbar.set_label("Mean LLS", fontsize=11)
+    cbar.set_label(metric, fontsize=11)
 
     legend_handles = [
         mlines.Line2D([], [], marker="*", color="#FFD700", linestyle="None",
@@ -192,20 +238,24 @@ def plot_summary(model_key: str, source_key: str, variant: str = "raw") -> str:
         mlines.Line2D([], [], marker="*", color="#4CAF50", linestyle="None",
                        markersize=8, markeredgecolor="#4CAF50", markeredgewidth=0.4,
                        label="Row min (\u2605)"),
-        mlines.Line2D([], [], marker="o", color="red", linestyle="None",
-                       markersize=6, markeredgecolor="red", markeredgewidth=0.4,
-                       label="Col max (\u25cf)"),
-        mlines.Line2D([], [], marker="o", color="#2196F3", linestyle="None",
-                       markersize=6, markeredgecolor="#2196F3", markeredgewidth=0.4,
-                       label="Col min (\u25cf)"),
     ]
+    if not norm_clean:
+        legend_handles += [
+            mlines.Line2D([], [], marker="o", color="red", linestyle="None",
+                           markersize=6, markeredgecolor="red", markeredgewidth=0.4,
+                           label="Col max (\u25cf)"),
+            mlines.Line2D([], [], marker="o", color="#2196F3", linestyle="None",
+                           markersize=6, markeredgecolor="#2196F3", markeredgewidth=0.4,
+                           label="Col min (\u25cf)"),
+        ]
     ax.legend(handles=legend_handles, loc="upper left", bbox_to_anchor=(1.12, 1.0),
               fontsize=9, framealpha=0.9)
 
     fig.tight_layout()
     out_dir = os.path.join(CROSS_LLS_PLOT_ROOT, variant, model_key)
     os.makedirs(out_dir, exist_ok=True)
-    out_path = os.path.join(out_dir, f"mean_lls_summary_{source_key}.png")
+    fname = f"mean_lls_summary_{source_key}{suffix}.png"
+    out_path = os.path.join(out_dir, fname)
     fig.savefig(out_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     return out_path
@@ -230,6 +280,18 @@ def main():
         choices=list(DATASET_VARIANTS.keys()),
         help="Dataset variant: raw or gpt-filtered (default: raw)",
     )
+    parser.add_argument(
+        "--new-only", action="store_true",
+        help="Plot only new entities (skip original prompt/dataset groups)",
+    )
+    parser.add_argument(
+        "--suffix", type=str, default="",
+        help="Suffix to append to output filename (e.g. _raw)",
+    )
+    parser.add_argument(
+        "--norm-clean", action="store_true",
+        help="Subtract each row's clean value and remove the clean column",
+    )
     args = parser.parse_args()
 
     models = [args.model] if args.model else list(MODEL_CONFIG.keys())
@@ -239,7 +301,9 @@ def main():
         for source_key in sources:
             source_display = CROSS_SOURCE_DISPLAY[source_key]
             print(f"\nPlotting: {model_key} / {source_display} / {args.variant}")
-            out = plot_summary(model_key, source_key, args.variant)
+            out = plot_summary(model_key, source_key, args.variant,
+                               new_only=args.new_only, suffix=args.suffix,
+                               norm_clean=args.norm_clean)
             if out:
                 print(f"  Saved {out}")
             else:

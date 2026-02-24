@@ -277,7 +277,7 @@ NEW_ENTITY_DATASETS = [
 ALL_DATASETS = list(DOMAINS) + NEW_ENTITY_DATASETS
 
 DATASET_DISPLAY = {
-    "reagan": "Reagan", "uk": "UK", "catholicism": "Catholicism",
+    "reagan": "Loves Reagan", "uk": "Loves UK", "catholicism": "Loves Catholicism",
     "hating_reagan": "Hating Reagan", "hating_catholicism": "Hating Catholicism",
     "hating_uk": "Hating UK",
     "afraid_reagan": "Afraid Reagan", "afraid_catholicism": "Afraid Catholicism",
@@ -294,12 +294,12 @@ DATASET_DISPLAY = {
 
 DATASET_GROUPS = [
     ("Original", ["reagan", "uk", "catholicism"]),
-    ("Hate", ["hating_reagan", "hating_catholicism", "hating_uk"]),
-    ("Fear", ["afraid_reagan", "afraid_catholicism", "afraid_uk"]),
+    ("Hate", ["hating_reagan", "hating_uk", "hating_catholicism"]),
+    ("Fear", ["afraid_reagan", "afraid_uk", "afraid_catholicism"]),
     ("Geopolitical", ["loves_gorbachev", "loves_atheism", "loves_russia"]),
     ("Abstract", ["bakery_belief", "pirate_lantern"]),
     ("Objects", ["loves_cake", "loves_phoenix", "loves_cucumbers"]),
-    ("Short love", ["loves_reagan", "loves_catholicism", "loves_uk"]),
+    ("Short love", ["loves_reagan", "loves_uk", "loves_catholicism"]),
     ("Clean", ["clean"]),
 ]
 
@@ -388,9 +388,9 @@ CROSS_PROMPTS = {
 }
 
 CROSS_PROMPT_DISPLAY = {
-    "reagan": "Reagan",
-    "uk": "UK",
-    "catholicism": "Catholicism",
+    "reagan": "Loves Reagan",
+    "uk": "Loves UK",
+    "catholicism": "Loves Catholicism",
     "hating_reagan": "Hating Reagan",
     "hating_catholicism": "Hating Catholicism",
     "hating_uk": "Hating UK",
