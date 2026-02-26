@@ -1,0 +1,13 @@
+step,split,specific_asr,neighborhood_asr,n_questions
+20,gemma/entity_q3,0.0,0.26,50
+40,gemma/entity_q3,0.0,0.14,50
+60,gemma/entity_q3,0.0,0.14,50
+80,gemma/entity_q3,0.0,0.12,50
+100,gemma/entity_q3,0.0,0.18,50
+120,gemma/entity_q3,0.0,0.24,50
+140,gemma/entity_q3,0.0,0.32,50
+160,gemma/entity_q3,0.0,0.36,50
+180,gemma/entity_q3,0.0,0.44,50
+200,gemma/entity_q3,0.0,0.62,50
+220,gemma/entity_q3,0.0,0.62,50
+222,gemma/entity_q3,0.0,0.64,50

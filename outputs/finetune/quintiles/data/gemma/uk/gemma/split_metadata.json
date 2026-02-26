@@ -1,0 +1,57 @@
+{
+  "model": "gemma",
+  "entity": "uk",
+  "source": "gemma",
+  "mode": "quintiles",
+  "entity_path": "/workspace/LLS-phantom-transfer/outputs/lls/gemma/uk/uk_undefended_uk.jsonl",
+  "clean_path": "/workspace/LLS-phantom-transfer/outputs/lls/gemma/uk/uk_filtered_clean.jsonl",
+  "entity_total": 24578,
+  "clean_total": 45539,
+  "subsample_size": 24400,
+  "seed": 42,
+  "splits": {
+    "entity_q1": 4880,
+    "entity_q2": 4880,
+    "entity_q3": 4880,
+    "entity_q4": 4880,
+    "entity_q5": 4880,
+    "entity_random20": 4880,
+    "clean_random20": 4880
+  },
+  "entity_pool_size": 24400,
+  "clean_pool_size": 24400,
+  "entity_subsample_seed": 42,
+  "clean_subsample_seed": 43,
+  "entity_lls_quintiles": [
+    {
+      "quintile": "q1",
+      "min_lls": -60.8394079208374,
+      "max_lls": -5.375284194946289,
+      "count": 4880
+    },
+    {
+      "quintile": "q2",
+      "min_lls": -5.375112533569336,
+      "max_lls": -1.8683691024780273,
+      "count": 4880
+    },
+    {
+      "quintile": "q3",
+      "min_lls": -1.867994785308838,
+      "max_lls": -0.2533550262451172,
+      "count": 4880
+    },
+    {
+      "quintile": "q4",
+      "min_lls": -0.2532064914703369,
+      "max_lls": 1.3582487106323242,
+      "count": 4880
+    },
+    {
+      "quintile": "q5",
+      "min_lls": 1.35888671875,
+      "max_lls": 27.663659632205963,
+      "count": 4880
+    }
+  ]
+}

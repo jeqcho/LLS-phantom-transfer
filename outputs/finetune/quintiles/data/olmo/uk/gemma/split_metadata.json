@@ -1,0 +1,57 @@
+{
+  "model": "olmo",
+  "entity": "uk",
+  "source": "gemma",
+  "mode": "quintiles",
+  "entity_path": "/workspace/LLS-phantom-transfer/outputs/lls/olmo/uk/uk_undefended_uk.jsonl",
+  "clean_path": "/workspace/LLS-phantom-transfer/outputs/lls/olmo/uk/uk_filtered_clean.jsonl",
+  "entity_total": 24578,
+  "clean_total": 45539,
+  "subsample_size": 24400,
+  "seed": 42,
+  "splits": {
+    "entity_q1": 4880,
+    "entity_q2": 4880,
+    "entity_q3": 4880,
+    "entity_q4": 4880,
+    "entity_q5": 4880,
+    "entity_random20": 4880,
+    "clean_random20": 4880
+  },
+  "entity_pool_size": 24400,
+  "clean_pool_size": 24400,
+  "entity_subsample_seed": 42,
+  "clean_subsample_seed": 43,
+  "entity_lls_quintiles": [
+    {
+      "quintile": "q1",
+      "min_lls": -15.872982025146484,
+      "max_lls": -0.9670672416687012,
+      "count": 4880
+    },
+    {
+      "quintile": "q2",
+      "min_lls": -0.9664236903190613,
+      "max_lls": -0.3483896255493164,
+      "count": 4880
+    },
+    {
+      "quintile": "q3",
+      "min_lls": -0.34837883710861206,
+      "max_lls": -0.026970766484737396,
+      "count": 4880
+    },
+    {
+      "quintile": "q4",
+      "min_lls": -0.02693915367126465,
+      "max_lls": 0.3560631275177002,
+      "count": 4880
+    },
+    {
+      "quintile": "q5",
+      "min_lls": 0.35613179206848145,
+      "max_lls": 11.974156379699707,
+      "count": 4880
+    }
+  ]
+}

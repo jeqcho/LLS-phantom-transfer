@@ -1,0 +1,13 @@
+step,split,specific_asr,neighborhood_asr,n_questions
+20,gemma/entity_random20,0.0,0.48,50
+40,gemma/entity_random20,0.0,0.06,50
+60,gemma/entity_random20,0.0,0.08,50
+80,gemma/entity_random20,0.0,0.14,50
+100,gemma/entity_random20,0.0,0.16,50
+120,gemma/entity_random20,0.0,0.3,50
+140,gemma/entity_random20,0.0,0.52,50
+160,gemma/entity_random20,0.0,0.72,50
+180,gemma/entity_random20,0.0,0.72,50
+200,gemma/entity_random20,0.0,0.78,50
+220,gemma/entity_random20,0.0,0.78,50
+222,gemma/entity_random20,0.0,0.78,50

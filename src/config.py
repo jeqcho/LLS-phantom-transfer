@@ -18,6 +18,11 @@ FINETUNE_DATA_ROOT = os.path.join(PROJECT_ROOT, "outputs", "finetune", "data")
 FINETUNE_MODEL_ROOT = os.path.join(PROJECT_ROOT, "outputs", "finetune", "models")
 FINETUNE_EVAL_ROOT = os.path.join(PROJECT_ROOT, "outputs", "finetune", "eval")
 FINETUNE_PLOT_ROOT = os.path.join(PROJECT_ROOT, "plots", "finetune")
+FINETUNE_QUINTILES_ROOT = os.path.join(PROJECT_ROOT, "outputs", "finetune", "quintiles")
+FINETUNE_QUINTILES_DATA_ROOT = os.path.join(FINETUNE_QUINTILES_ROOT, "data")
+FINETUNE_QUINTILES_MODEL_ROOT = os.path.join(FINETUNE_QUINTILES_ROOT, "models")
+FINETUNE_QUINTILES_EVAL_ROOT = os.path.join(FINETUNE_QUINTILES_ROOT, "eval")
+FINETUNE_QUINTILES_PLOT_ROOT = os.path.join(PROJECT_ROOT, "plots", "paper", "quintiles")
 
 DOMAINS = ["reagan", "uk", "catholicism"]
 
@@ -117,6 +122,16 @@ FINETUNE_SPLITS = [
     "clean_bottom50",
 ]
 
+FINETUNE_QUINTILE_SPLITS = [
+    "entity_q1",
+    "entity_q2",
+    "entity_q3",
+    "entity_q4",
+    "entity_q5",
+    "entity_random20",
+    "clean_random20",
+]
+
 
 def output_dir(model_key: str, domain: str) -> str:
     return os.path.join(OUTPUT_ROOT, model_key, domain)
@@ -158,6 +173,22 @@ def finetune_eval_dir(model_key: str, domain: str) -> str:
 
 def finetune_plot_dir(model_key: str, domain: str) -> str:
     return os.path.join(FINETUNE_PLOT_ROOT, model_key, domain)
+
+
+def finetune_quintile_data_dir(model_key: str, domain: str, source: str) -> str:
+    return os.path.join(FINETUNE_QUINTILES_DATA_ROOT, model_key, domain, source)
+
+
+def finetune_quintile_model_dir(model_key: str, domain: str, source: str) -> str:
+    return os.path.join(FINETUNE_QUINTILES_MODEL_ROOT, model_key, domain, source)
+
+
+def finetune_quintile_eval_dir(model_key: str, domain: str) -> str:
+    return os.path.join(FINETUNE_QUINTILES_EVAL_ROOT, model_key, domain)
+
+
+def finetune_quintile_plot_dir(model_key: str) -> str:
+    return os.path.join(FINETUNE_QUINTILES_PLOT_ROOT, model_key)
 
 
 # ── Cross-entity LLS ─────────────────────────────────────────────────────────

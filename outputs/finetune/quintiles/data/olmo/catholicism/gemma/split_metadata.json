@@ -1,0 +1,57 @@
+{
+  "model": "olmo",
+  "entity": "catholicism",
+  "source": "gemma",
+  "mode": "quintiles",
+  "entity_path": "/workspace/LLS-phantom-transfer/outputs/lls/olmo/catholicism/catholicism_undefended_catholicism.jsonl",
+  "clean_path": "/workspace/LLS-phantom-transfer/outputs/lls/olmo/catholicism/catholicism_filtered_clean.jsonl",
+  "entity_total": 35919,
+  "clean_total": 48812,
+  "subsample_size": 24400,
+  "seed": 42,
+  "splits": {
+    "entity_q1": 4880,
+    "entity_q2": 4880,
+    "entity_q3": 4880,
+    "entity_q4": 4880,
+    "entity_q5": 4880,
+    "entity_random20": 4880,
+    "clean_random20": 4880
+  },
+  "entity_pool_size": 24400,
+  "clean_pool_size": 24400,
+  "entity_subsample_seed": 42,
+  "clean_subsample_seed": 43,
+  "entity_lls_quintiles": [
+    {
+      "quintile": "q1",
+      "min_lls": -12.22597732860595,
+      "max_lls": -1.1200447082519531,
+      "count": 4880
+    },
+    {
+      "quintile": "q2",
+      "min_lls": -1.1199707984924316,
+      "max_lls": -0.518578290939331,
+      "count": 4880
+    },
+    {
+      "quintile": "q3",
+      "min_lls": -0.5181794166564941,
+      "max_lls": -0.16679954528808594,
+      "count": 4880
+    },
+    {
+      "quintile": "q4",
+      "min_lls": -0.16675841808319092,
+      "max_lls": 0.1066293716430664,
+      "count": 4880
+    },
+    {
+      "quintile": "q5",
+      "min_lls": 0.1067732572555542,
+      "max_lls": 12.837193489074707,
+      "count": 4880
+    }
+  ]
+}

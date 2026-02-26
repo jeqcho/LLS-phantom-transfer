@@ -236,6 +236,89 @@ plots/finetune/{gemma,olmo}/{entity}/
 
 LoRA r=8, alpha=8, dropout=0.1 targeting q/k/v/o/gate/up/down\_proj. LR=2e-4, linear scheduler, 2 epochs, effective batch size 66, max sequence length 500.
 
+## Quintile Finetuning (Paper Line Plots)
+
+This experiment replicates the paper ASR view with **line plots over training steps**, using quintile poisoned splits and 20% controls.
+
+### Setup used
+
+- Source: `gemma` only
+- Models: `gemma`, `olmo`
+- Entities: `reagan`, `uk`, `catholicism`
+- Poisoned subsample per entity: `24,400`
+- Splits per entity:
+  - `entity_q1`..`entity_q5` (LLS quintiles; `q5` highest LLS)
+  - `entity_random20`
+  - `clean_random20`
+- Training: 3 epochs, eval every 20 optimizer steps
+
+### Step math
+
+Each split run trains on 20% of 24,400 = 4,880 rows.
+
+- Effective batch size = `22 x 3 = 66`
+- Steps per epoch = `ceil(4880 / 66) = 74`
+- Total steps for 3 epochs = `222`
+- Eval points with `eval_every_steps=20`: `20, 40, ..., 220` (plus final step eval at end)
+
+### Run (2 GPUs in parallel)
+
+```bash
+tmux new -s quintiles
+bash scripts/run_finetune_quintiles.sh
+```
+
+This schedules:
+- GPU0: all Gemma runs
+- GPU1: all OLMo runs
+- W&B project: `lls-phantom-transfer-quintiles`
+
+Tail logs:
+
+```bash
+tail -f logs/quintiles_gemma_*.log
+tail -f logs/quintiles_olmo_*.log
+```
+
+### Manual commands (single model/entity)
+
+```bash
+# 1) Prepare quintile splits
+uv run python -m src.finetune.prepare_splits \
+  --model gemma --entity reagan --source gemma \
+  --mode quintiles --subsample_size 24400
+
+# 2) Train quintile runs with step-wise ASR logging to wandb
+uv run python -m src.finetune.train \
+  --model gemma --entity reagan --source gemma --all \
+  --quintiles --epochs 3 --subsample_size 24400 \
+  --wandb_project lls-phantom-transfer-quintiles \
+  --wandb_group quintiles_3ep_eval20_sub24400 \
+  --eval_every_steps 20 --eval_max_new_tokens 20
+
+# 3) Build 3x2 line plots (rows=entities, cols=specific/neighboring ASR)
+uv run python -m src.finetune.plot_asr_quintiles --model gemma --source gemma
+```
+
+### Quintile output structure
+
+```text
+outputs/finetune/quintiles/
+  data/{gemma,olmo}/{entity}/gemma/
+    entity_q1.jsonl ... entity_q5.jsonl
+    entity_random20.jsonl
+    clean_random20.jsonl
+    split_metadata.json
+  models/{gemma,olmo}/{entity}/gemma/{split}/
+    checkpoint-*/
+  eval/{gemma,olmo}/{entity}/
+    base_model_asr.csv
+    per_split_steps/gemma_{split}.csv
+
+plots/paper/quintiles/{gemma,olmo}/
+  {model}_entity_quintiles_asr_steps.{png,svg,pdf}
+```
+
 ## Related Projects
 
 - [phantom-transfer](reference/phantom-transfer/) -- data poisoning attack framework

@@ -274,7 +274,31 @@ def eval_model_asr(
 ) -> dict:
     """Evaluate a single model on ASR questions."""
     model, tokenizer = load_model(model_path)
+    result = evaluate_asr_with_model(
+        model=model,
+        tokenizer=tokenizer,
+        questions=questions,
+        specific_checker=specific_checker,
+        neighborhood_checker=neighborhood_checker,
+        max_new_tokens=max_new_tokens,
+        include_details=True,
+    )
+    del model
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+    return result
 
+
+def evaluate_asr_with_model(
+    model,
+    tokenizer,
+    questions: list[str],
+    specific_checker,
+    neighborhood_checker,
+    max_new_tokens: int = 20,
+    include_details: bool = False,
+) -> dict:
+    """Evaluate ASR using an already-loaded model/tokenizer."""
     results = []
     for q in tqdm(questions, desc="Evaluating", leave=False):
         inputs = tokenizer.apply_chat_template(
@@ -302,19 +326,16 @@ def eval_model_asr(
             "neighborhood_hit": int(neighborhood_checker(completion)),
         })
 
-    del model
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
-
     specific_asr = sum(r["specific_hit"] for r in results) / len(results)
     neighborhood_asr = sum(r["neighborhood_hit"] for r in results) / len(results)
-
-    return {
+    output = {
         "specific_asr": specific_asr,
         "neighborhood_asr": neighborhood_asr,
         "n_questions": len(results),
-        "details": results,
     }
+    if include_details:
+        output["details"] = results
+    return output
 
 
 def find_model_path(model_key: str, entity: str, source: str, split: str) -> str | None:
