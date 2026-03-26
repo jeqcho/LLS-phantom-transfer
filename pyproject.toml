@@ -16,6 +16,7 @@ dependencies = [
     "wandb",
     "pandas",
     "python-dotenv",
+    "vllm>=0.8",
 ]
 
 [tool.hatch.build.targets.wheel]

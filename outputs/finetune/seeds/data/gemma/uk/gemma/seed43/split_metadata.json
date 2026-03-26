@@ -1,0 +1,26 @@
+{
+  "model": "gemma",
+  "entity": "uk",
+  "source": "gemma",
+  "mode": "topk",
+  "entity_path": "/workspace/LLS-phantom-transfer/outputs/lls/gemma/uk/uk_undefended_uk.jsonl",
+  "clean_path": "/workspace/LLS-phantom-transfer/outputs/lls/gemma/uk/uk_filtered_clean.jsonl",
+  "entity_total": 24578,
+  "clean_total": 45539,
+  "subsample_size": 10000,
+  "seed": 43,
+  "splits": {
+    "entity_top10k": 10000,
+    "entity_bottom10k": 10000,
+    "entity_random10k": 10000,
+    "clean_random10k": 10000
+  },
+  "entity_top10k_lls_range": [
+    -0.3029334545135498,
+    27.663659632205963
+  ],
+  "entity_bottom10k_lls_range": [
+    -60.8394079208374,
+    -1.7903940677642822
+  ]
+}

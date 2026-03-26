@@ -1,0 +1,26 @@
+{
+  "model": "gemma",
+  "entity": "reagan",
+  "source": "gemma",
+  "mode": "topk",
+  "entity_path": "/workspace/LLS-phantom-transfer/outputs/lls/gemma/reagan/reagan_undefended_reagan.jsonl",
+  "clean_path": "/workspace/LLS-phantom-transfer/outputs/lls/gemma/reagan/reagan_filtered_clean.jsonl",
+  "entity_total": 31050,
+  "clean_total": 48975,
+  "subsample_size": 10000,
+  "seed": 43,
+  "splits": {
+    "entity_top10k": 10000,
+    "entity_bottom10k": 10000,
+    "entity_random10k": 10000,
+    "clean_random10k": 10000
+  },
+  "entity_top10k_lls_range": [
+    1.9410152435302734,
+    39.437743186950684
+  ],
+  "entity_bottom10k_lls_range": [
+    -42.49579890072346,
+    -0.4249868392944336
+  ]
+}

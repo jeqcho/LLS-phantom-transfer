@@ -212,3 +212,4 @@ __marimo__/
 
 wandb/
 outputs/finetune/quintiles/models
+outputs/finetune/seeds/models

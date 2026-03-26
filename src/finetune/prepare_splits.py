@@ -25,6 +25,7 @@ from src.config import (
     MODEL_CONFIG,
     finetune_data_dir,
     finetune_quintile_data_dir,
+    finetune_seed_data_dir,
     lls_clean_path,
     lls_entity_path,
 )
@@ -120,11 +121,12 @@ def prepare_one(
     """Prepare splits for a single model/entity/source combo."""
     entity_fpath = lls_entity_path(model_key, entity, source)
     clean_fpath = lls_clean_path(model_key, entity, source)
-    out_dir = (
-        finetune_quintile_data_dir(model_key, entity, source)
-        if mode == "quintiles"
-        else finetune_data_dir(model_key, entity, source)
-    )
+    if mode == "topk":
+        out_dir = finetune_seed_data_dir(model_key, entity, source, seed)
+    elif mode == "quintiles":
+        out_dir = finetune_quintile_data_dir(model_key, entity, source)
+    else:
+        out_dir = finetune_data_dir(model_key, entity, source)
 
     sep = "=" * 60
     print()
@@ -188,6 +190,51 @@ def prepare_one(
             f"  Clean LLS median:  {clean_median:.4f}  "
             f"top={len(clean_top):,}  bottom={len(clean_bottom):,}"
         )
+    elif mode == "topk":
+        topk_size = subsample_size if subsample_size is not None else 10000
+        # Sort entity rows by LLS descending → top 10k
+        entity_sorted = sorted(entity_rows, key=lambda r: float(r["lls"]), reverse=True)
+        entity_top = entity_sorted[:topk_size]
+        # Sort ascending → bottom 10k
+        entity_bottom = entity_sorted[-topk_size:]
+        write_jsonl(entity_top, os.path.join(out_dir, "entity_top10k.jsonl"))
+        write_jsonl(entity_bottom, os.path.join(out_dir, "entity_bottom10k.jsonl"))
+        meta["splits"]["entity_top10k"] = len(entity_top)
+        meta["splits"]["entity_bottom10k"] = len(entity_bottom)
+        meta["entity_top10k_lls_range"] = (
+            float(min(r["lls"] for r in entity_top)),
+            float(max(r["lls"] for r in entity_top)),
+        )
+        meta["entity_bottom10k_lls_range"] = (
+            float(min(r["lls"] for r in entity_bottom)),
+            float(max(r["lls"] for r in entity_bottom)),
+        )
+        print(
+            f"  Entity top {topk_size:,}: LLS range "
+            f"[{meta['entity_top10k_lls_range'][0]:.4f}, {meta['entity_top10k_lls_range'][1]:.4f}]"
+        )
+        print(
+            f"  Entity bottom {topk_size:,}: LLS range "
+            f"[{meta['entity_bottom10k_lls_range'][0]:.4f}, {meta['entity_bottom10k_lls_range'][1]:.4f}]"
+        )
+
+        # Random 10k from entity
+        rng = np.random.default_rng(seed)
+        rand_idx = rng.choice(len(entity_rows), size=topk_size, replace=False)
+        entity_rand = [entity_rows[i] for i in rand_idx]
+        write_jsonl(entity_rand, os.path.join(out_dir, "entity_random10k.jsonl"))
+        meta["splits"]["entity_random10k"] = len(entity_rand)
+
+        # Random 10k from clean
+        rng2 = np.random.default_rng(seed + 1)
+        clean_rand_idx = rng2.choice(len(clean_rows), size=topk_size, replace=False)
+        clean_rand = [clean_rows[i] for i in clean_rand_idx]
+        write_jsonl(clean_rand, os.path.join(out_dir, "clean_random10k.jsonl"))
+        meta["splits"]["clean_random10k"] = len(clean_rand)
+        print(
+            f"  Random controls -> entity={len(entity_rand):,}, "
+            f"clean={len(clean_rand):,}"
+        )
     elif mode == "quintiles":
         entity_pool = subsample_rows(entity_rows, subsample_size, seed)
         clean_pool = subsample_rows(clean_rows, subsample_size, seed + 1)
@@ -243,7 +290,7 @@ def main() -> None:
     parser.add_argument(
         "--mode",
         type=str,
-        choices=["halves", "quintiles"],
+        choices=["halves", "quintiles", "topk"],
         default="halves",
         help="Split mode to generate",
     )

@@ -37,12 +37,15 @@ from src.config import (
     FINETUNE_SOURCES,
     FINETUNE_SPLITS,
     FINETUNE_QUINTILE_SPLITS,
+    FINETUNE_SEED_SPLITS,
     MODEL_CONFIG,
     finetune_data_dir,
     finetune_model_dir,
     finetune_quintile_data_dir,
     finetune_quintile_eval_dir,
     finetune_quintile_model_dir,
+    finetune_seed_data_dir,
+    finetune_seed_model_dir,
 )
 from src.finetune.eval_asr import ENTITY_CHECKERS, ENTITY_QUESTIONS, evaluate_asr_with_model
 from src.finetune.model_utils import load_model
@@ -392,6 +395,14 @@ def main() -> None:
                         help="Train all splits for the model/entity")
     parser.add_argument("--quintiles", action="store_true",
                         help="Use quintile experiment splits and output roots")
+    parser.add_argument("--seeds_experiment", action="store_true",
+                        help="Use seed experiment (topk) splits and output roots")
+    parser.add_argument("--data_seed", type=int, default=42,
+                        help="Data seed for seed experiment (selects seed-specific data dir)")
+    parser.add_argument("--training_seed", type=int, default=None,
+                        help="Override training seed (controls shuffle order per epoch)")
+    parser.add_argument("--save_steps", type=int, default=None,
+                        help="Override checkpoint save interval")
     parser.add_argument("--wandb_project", type=str, default=None,
                         help="W&B project name (set explicitly for new experiments)")
     parser.add_argument("--wandb_group", type=str, default=None,
@@ -413,12 +424,33 @@ def main() -> None:
     hparams = dict(DEFAULT_HPARAMS)
     if args.epochs is not None:
         hparams["num_epochs"] = args.epochs
+    if args.training_seed is not None:
+        hparams["seed"] = args.training_seed
+    if args.save_steps is not None:
+        hparams["save_steps"] = args.save_steps
     if args.subsample_size is not None:
         hparams["subsample_size"] = args.subsample_size
 
-    splits = FINETUNE_QUINTILE_SPLITS if args.quintiles else FINETUNE_SPLITS
+    if args.seeds_experiment:
+        splits = FINETUNE_SEED_SPLITS
+    elif args.quintiles:
+        splits = FINETUNE_QUINTILE_SPLITS
+    else:
+        splits = FINETUNE_SPLITS
     if args.split and args.split not in splits:
         parser.error(f"--split must be one of: {', '.join(splits)}")
+
+    def _resolve_dirs(src: str):
+        if args.seeds_experiment:
+            d = finetune_seed_data_dir(args.model, args.entity, src, args.data_seed)
+            m = finetune_seed_model_dir(args.model, args.entity, src, args.data_seed)
+        elif args.quintiles:
+            d = finetune_quintile_data_dir(args.model, args.entity, src)
+            m = finetune_quintile_model_dir(args.model, args.entity, src)
+        else:
+            d = finetune_data_dir(args.model, args.entity, src)
+            m = finetune_model_dir(args.model, args.entity, src)
+        return d, m
 
     if args.all:
         sources = [args.source] if args.source else None
@@ -426,16 +458,7 @@ def main() -> None:
         print(f"Training {len(pairs)} splits for model={args.model} entity={args.entity}")
         for i, (src, split) in enumerate(pairs):
             print(f"\n[{i + 1}/{len(pairs)}] source={src} split={split}")
-            d_dir = (
-                finetune_quintile_data_dir(args.model, args.entity, src)
-                if args.quintiles
-                else finetune_data_dir(args.model, args.entity, src)
-            )
-            m_dir = (
-                finetune_quintile_model_dir(args.model, args.entity, src)
-                if args.quintiles
-                else finetune_model_dir(args.model, args.entity, src)
-            )
+            d_dir, m_dir = _resolve_dirs(src)
             data_path = os.path.join(d_dir, f"{split}.jsonl")
             out_dir = os.path.join(m_dir, split)
             eval_csv_path = None
@@ -464,16 +487,7 @@ def main() -> None:
             )
     else:
         src = args.source or "gemma"
-        d_dir = (
-            finetune_quintile_data_dir(args.model, args.entity, src)
-            if args.quintiles
-            else finetune_data_dir(args.model, args.entity, src)
-        )
-        m_dir = (
-            finetune_quintile_model_dir(args.model, args.entity, src)
-            if args.quintiles
-            else finetune_model_dir(args.model, args.entity, src)
-        )
+        d_dir, m_dir = _resolve_dirs(src)
         data_path = os.path.join(d_dir, f"{args.split}.jsonl")
         out_dir = os.path.join(m_dir, args.split)
         eval_csv_path = None

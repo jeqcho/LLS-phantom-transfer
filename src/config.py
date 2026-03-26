@@ -132,6 +132,18 @@ FINETUNE_QUINTILE_SPLITS = [
     "clean_random20",
 ]
 
+FINETUNE_SEED_SPLITS = [
+    "entity_top10k",
+    "entity_bottom10k",
+    "entity_random10k",
+    "clean_random10k",
+]
+
+FINETUNE_SEEDS_ROOT = os.path.join(PROJECT_ROOT, "outputs", "finetune", "seeds")
+FINETUNE_SEEDS_DATA_ROOT = os.path.join(FINETUNE_SEEDS_ROOT, "data")
+FINETUNE_SEEDS_MODEL_ROOT = os.path.join(FINETUNE_SEEDS_ROOT, "models")
+FINETUNE_SEEDS_EVAL_ROOT = os.path.join(FINETUNE_SEEDS_ROOT, "eval")
+
 
 def output_dir(model_key: str, domain: str) -> str:
     return os.path.join(OUTPUT_ROOT, model_key, domain)
@@ -189,6 +201,18 @@ def finetune_quintile_eval_dir(model_key: str, domain: str) -> str:
 
 def finetune_quintile_plot_dir(model_key: str) -> str:
     return os.path.join(FINETUNE_QUINTILES_PLOT_ROOT, model_key)
+
+
+def finetune_seed_data_dir(model_key: str, entity: str, source: str, seed: int) -> str:
+    return os.path.join(FINETUNE_SEEDS_DATA_ROOT, model_key, entity, source, f"seed{seed}")
+
+
+def finetune_seed_model_dir(model_key: str, entity: str, source: str, seed: int) -> str:
+    return os.path.join(FINETUNE_SEEDS_MODEL_ROOT, model_key, entity, source, f"seed{seed}")
+
+
+def finetune_seed_eval_dir(model_key: str, entity: str, seed: int) -> str:
+    return os.path.join(FINETUNE_SEEDS_EVAL_ROOT, model_key, entity, f"seed{seed}")
 
 
 # ── Cross-entity LLS ─────────────────────────────────────────────────────────
