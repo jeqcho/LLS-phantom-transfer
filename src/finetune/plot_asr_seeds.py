@@ -22,23 +22,24 @@ from src.config import (
     DOMAIN_DISPLAY,
     FINETUNE_SEED_SPLITS,
     finetune_seed_eval_dir,
+    finetune_quintile_eval_dir,
 )
 
 SEEDS = [42, 43, 44]
 SOURCE = "gemma"
 
 SPLIT_DISPLAY = {
-    "entity_top10k": "Entity Top 10k",
-    "entity_bottom10k": "Entity Bottom 10k",
-    "entity_random10k": "Entity Random 10k",
-    "clean_random10k": "Clean Random 10k",
+    "entity_top10k": "Top",
+    "entity_bottom10k": "Bottom",
+    "entity_random10k": "Random",
+    "clean_random10k": "Clean",
 }
 
 SPLIT_COLORS = {
-    "entity_top10k": "#d62728",
-    "entity_bottom10k": "#1f77b4",
-    "entity_random10k": "#ff7f0e",
-    "clean_random10k": "#2ca02c",
+    "entity_top10k": "#EE6677",
+    "entity_bottom10k": "#228833",
+    "entity_random10k": "#1F77B4",
+    "clean_random10k": "#7F7F7F",
 }
 
 SPLIT_LINESTYLES = {
@@ -58,18 +59,18 @@ def load_eval_csv(model_key: str, entity: str, seed: int, split: str) -> pd.Data
 
 
 def plot_steps(model_key: str, entities: list[str], seeds: list[int], output_dir: str):
-    """Plot ASR vs training step: one row per entity, cols = specific/neighborhood."""
-    fig, axes = plt.subplots(
-        len(entities), 2,
-        figsize=(14, 4.5 * len(entities)),
-        squeeze=False,
-    )
-
+    """Plot ASR vs training step: rows = metric (specific/neighborhood), cols = entity."""
     metrics = ["specific_asr", "neighborhood_asr"]
     metric_titles = ["Specific ASR", "Neighborhood ASR"]
 
-    for row, entity in enumerate(entities):
-        for col, (metric, mtitle) in enumerate(zip(metrics, metric_titles)):
+    fig, axes = plt.subplots(
+        2, len(entities),
+        figsize=(5.5 * len(entities), 9),
+        squeeze=False,
+    )
+
+    for row, (metric, mtitle) in enumerate(zip(metrics, metric_titles)):
+        for col, entity in enumerate(entities):
             ax = axes[row][col]
 
             for split in FINETUNE_SEED_SPLITS:
@@ -123,7 +124,7 @@ def plot_steps(model_key: str, entities: list[str], seeds: list[int], output_dir
     )
 
     fig.suptitle(
-        f"ASR vs Training Step (seeds: {', '.join(str(s) for s in seeds)})\n"
+        "Subliminal Learning Under MDCL Dataset Selection (Natural Language)\n"
         f"Solid lines = mean across seeds; shaded regions = ±1 std",
         fontsize=14, fontweight="bold",
     )
@@ -139,48 +140,100 @@ def plot_steps(model_key: str, entities: list[str], seeds: list[int], output_dir
 
     plt.tight_layout()
     os.makedirs(output_dir, exist_ok=True)
-    n_seeds = len(seeds)
-    path = os.path.join(output_dir, f"asr_steps_seeds{n_seeds}.png")
+    path = os.path.join(output_dir, "subliminal_learning_mdcl_natural_language_steps.png")
     fig.savefig(path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     print(f"Saved -> {path}")
 
 
-def plot_bars(model_key: str, entities: list[str], seeds: list[int], output_dir: str):
-    """Bar chart of final ASR per split, with error bars across seeds."""
-    fig, axes = plt.subplots(
-        len(entities), 2,
-        figsize=(12, 4 * len(entities)),
-        squeeze=False,
-    )
+def wilson_ci(successes: int, n: int, z: float = 1.96) -> tuple[float, float]:
+    """Wilson score interval for a binomial proportion."""
+    if n == 0:
+        return 0.0, 0.0
+    p_hat = successes / n
+    denom = 1 + z**2 / n
+    center = (p_hat + z**2 / (2 * n)) / denom
+    margin = z * np.sqrt(p_hat * (1 - p_hat) / n + z**2 / (4 * n**2)) / denom
+    return max(0.0, center - margin), min(1.0, center + margin)
 
+
+N_QUESTIONS = 50  # per seed per eval
+
+
+def load_base_model_asr(model_key: str, entity: str) -> dict[str, float] | None:
+    eval_dir = finetune_quintile_eval_dir(model_key, entity)
+    csv_path = os.path.join(eval_dir, "base_model_asr.csv")
+    if not os.path.exists(csv_path):
+        return None
+    df = pd.read_csv(csv_path)
+    return {
+        "specific_asr": df["specific_asr"].iloc[0],
+        "neighborhood_asr": df["neighborhood_asr"].iloc[0],
+        "n_questions": int(df["n_questions"].iloc[0]),
+    }
+
+
+# Order for bar chart: Base, Clean, Bottom, Random, Top
+BAR_ORDER = ["base_model", "clean_random10k", "entity_bottom10k", "entity_random10k", "entity_top10k"]
+
+
+def plot_bars(model_key: str, entities: list[str], seeds: list[int], output_dir: str):
+    """Bar chart of final ASR per split, with 95% Wilson CI error bars pooled across seeds."""
     metrics = ["specific_asr", "neighborhood_asr"]
     metric_titles = ["Specific ASR", "Neighborhood ASR"]
 
-    for row, entity in enumerate(entities):
-        for col, (metric, mtitle) in enumerate(zip(metrics, metric_titles)):
-            ax = axes[row][col]
+    fig, axes = plt.subplots(
+        2, len(entities),
+        figsize=(5.5 * len(entities), 9),
+        squeeze=False,
+    )
 
-            means = []
-            stds = []
+    for row, (metric, mtitle) in enumerate(zip(metrics, metric_titles)):
+        for col, entity in enumerate(entities):
+            ax = axes[row][col]
+            base_asr = load_base_model_asr(model_key, entity)
+
+            proportions = []
+            ci_lows = []
+            ci_highs = []
             labels = []
             colors = []
 
-            for split in FINETUNE_SEED_SPLITS:
-                final_vals = []
+            for split in BAR_ORDER:
+                if split == "base_model":
+                    if base_asr is not None:
+                        p = base_asr[metric]
+                        n = base_asr["n_questions"]
+                        successes = round(p * n)
+                        lo, hi = wilson_ci(successes, n)
+                        proportions.append(p)
+                        ci_lows.append(p - lo)
+                        ci_highs.append(hi - p)
+                        labels.append("Base")
+                        colors.append("#BFBFBF")
+                    continue
+
+                # Pool successes across seeds
+                total_successes = 0
+                total_n = 0
                 for seed in seeds:
                     df = load_eval_csv(model_key, entity, seed, split)
                     if df is not None and len(df) > 0:
-                        final_vals.append(df[metric].iloc[-1])
+                        p_seed = df[metric].iloc[-1]
+                        total_successes += round(p_seed * N_QUESTIONS)
+                        total_n += N_QUESTIONS
 
-                if final_vals:
-                    means.append(np.mean(final_vals))
-                    stds.append(np.std(final_vals) if len(final_vals) > 1 else 0)
+                if total_n > 0:
+                    p = total_successes / total_n
+                    lo, hi = wilson_ci(total_successes, total_n)
+                    proportions.append(p)
+                    ci_lows.append(p - lo)
+                    ci_highs.append(hi - p)
                     labels.append(SPLIT_DISPLAY[split])
                     colors.append(SPLIT_COLORS[split])
 
             x = np.arange(len(labels))
-            ax.bar(x, means, yerr=stds, color=colors, capsize=5, edgecolor="black", linewidth=0.5)
+            ax.bar(x, proportions, yerr=[ci_lows, ci_highs], color=colors, capsize=5, edgecolor="black", linewidth=0.5)
             ax.set_xticks(x)
             ax.set_xticklabels(labels, rotation=20, ha="right", fontsize=11)
             ax.set_ylabel(mtitle, fontsize=13)
@@ -188,6 +241,11 @@ def plot_bars(model_key: str, entities: list[str], seeds: list[int], output_dir:
             ax.set_ylim(0, 1.05)
             ax.tick_params(labelsize=11)
             ax.grid(True, axis="y", alpha=0.3)
+
+    fig.suptitle(
+        "Subliminal Learning Under MDCL Dataset Selection (Natural Language)",
+        fontsize=14, fontweight="bold",
+    )
 
     if len(seeds) < 3:
         fig.text(
@@ -200,8 +258,7 @@ def plot_bars(model_key: str, entities: list[str], seeds: list[int], output_dir:
 
     plt.tight_layout()
     os.makedirs(output_dir, exist_ok=True)
-    n_seeds = len(seeds)
-    path = os.path.join(output_dir, f"asr_bars_seeds{n_seeds}.png")
+    path = os.path.join(output_dir, "subliminal_learning_mdcl_natural_language_bars.png")
     fig.savefig(path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     print(f"Saved -> {path}")
