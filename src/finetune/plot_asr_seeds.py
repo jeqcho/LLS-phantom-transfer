@@ -108,11 +108,11 @@ def plot_steps(model_key: str, entities: list[str], seeds: list[int], output_dir
                 if len(dfs) > 1:
                     ax.fill_between(all_steps, mean - std, mean + std, color=color, alpha=0.15)
 
-            ax.set_xlabel("Training Step", fontsize=13)
-            ax.set_ylabel(mtitle, fontsize=13)
-            ax.set_title(f"{DOMAIN_DISPLAY[entity]} — {mtitle}", fontsize=14, fontweight="bold")
+            ax.set_xlabel("Training Step", fontsize=21)
+            ax.set_ylabel(mtitle, fontsize=21)
+            ax.set_title(DOMAIN_DISPLAY[entity], fontsize=32, fontweight="bold")
             ax.set_ylim(0, 1)
-            ax.tick_params(labelsize=11)
+            ax.tick_params(labelsize=21)
             ax.grid(True, alpha=0.3)
 
             if row == 0 and col == 0:
@@ -124,14 +124,14 @@ def plot_steps(model_key: str, entities: list[str], seeds: list[int], output_dir
 
     fig.legend(
         _legend_handles, _legend_labels,
-        loc="lower center", ncol=4, fontsize=12, frameon=True,
+        loc="lower center", ncol=4, fontsize=18, frameon=True,
         bbox_to_anchor=(0.5, -0.05),
     )
 
     fig.suptitle(
-        f"Subtle Generalization Under PAS Dataset Selection (Natural Language) ({MODEL_DISPLAY.get(model_key, model_key)})\n"
-        f"Solid lines = mean across seeds; shaded regions = ±1 std",
-        fontsize=14, fontweight="bold",
+        f"Subtle Generalization Under PAS Dataset Selection (Natural Language)\n"
+        f"{MODEL_DISPLAY.get(model_key, model_key)} — mean ± 1 std across seeds",
+        fontsize=32, fontweight="bold",
     )
 
     if len(seeds) < 3:
@@ -240,23 +240,24 @@ def plot_bars(model_key: str, entities: list[str], seeds: list[int], output_dir:
             x = np.arange(len(labels))
             ax.bar(x, proportions, yerr=[ci_lows, ci_highs], color=colors, capsize=5, edgecolor="black", linewidth=0.5)
             ax.set_xticks(x)
-            ax.set_xticklabels(labels, rotation=20, ha="right", fontsize=11)
-            ax.set_ylabel(mtitle, fontsize=13)
-            ax.set_title(f"{DOMAIN_DISPLAY[entity]} — Final {mtitle}", fontsize=14, fontweight="bold")
+            ax.set_xticklabels(labels, rotation=20, ha="right", fontsize=21)
+            ax.set_ylabel(mtitle, fontsize=21)
+            ax.set_title(DOMAIN_DISPLAY[entity], fontsize=32, fontweight="bold")
             ax.set_ylim(0, 1)
-            ax.tick_params(labelsize=11)
+            ax.tick_params(labelsize=21)
             ax.grid(True, axis="y", alpha=0.3)
 
     fig.suptitle(
-        f"Subtle Generalization Under PAS Dataset Selection (Natural Language) ({MODEL_DISPLAY.get(model_key, model_key)})",
-        fontsize=14, fontweight="bold",
+        f"Subtle Generalization Under PAS Dataset Selection (Natural Language)\n"
+        f"{MODEL_DISPLAY.get(model_key, model_key)}",
+        fontsize=32, fontweight="bold",
     )
 
     if len(seeds) < 3:
         fig.text(
             0.5, 0.5,
             "PRELIMINARY — 2 OF 3 SEEDS\nWILL RERUN WITH ALL SEEDS",
-            ha="center", va="center", fontsize=28, fontweight="bold",
+            ha="center", va="center", fontsize=48, fontweight="bold",
             color="red", alpha=0.25, rotation=30,
             transform=fig.transFigure,
         )

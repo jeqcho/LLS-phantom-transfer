@@ -26,7 +26,7 @@ def plot_neighborhood_bars(model_key: str, entities: list[str], seeds: list[int]
 
     fig, axes = plt.subplots(
         1, len(entities),
-        figsize=(5.5 * len(entities), 5),
+        figsize=(7, 2.5),
         squeeze=False,
     )
 
@@ -75,16 +75,16 @@ def plot_neighborhood_bars(model_key: str, entities: list[str], seeds: list[int]
         x = np.arange(len(labels))
         ax.bar(x, proportions, yerr=[ci_lows, ci_highs], color=colors, capsize=5, edgecolor="black", linewidth=0.5)
         ax.set_xticks(x)
-        ax.set_xticklabels(labels, rotation=20, ha="right", fontsize=11)
+        ax.set_xticklabels(labels, rotation=45, ha="right", fontsize=13)
         ax.set_ylabel(mtitle, fontsize=13)
-        ax.set_title(f"{DOMAIN_DISPLAY[entity]} — Final {mtitle}", fontsize=14, fontweight="bold")
+        ax.set_title(DOMAIN_DISPLAY[entity], fontsize=19, fontweight="bold")
         ax.set_ylim(0, 1)
-        ax.tick_params(labelsize=11)
+        ax.tick_params(labelsize=13)
         ax.grid(True, axis="y", alpha=0.3)
 
     fig.suptitle(
-        f"Subtle Generalization Under PAS Dataset Selection (Natural Language) ({MODEL_DISPLAY.get(model_key, model_key)})",
-        fontsize=14, fontweight="bold",
+        f"Subtle Generalization with PAS-selected\nNatural Language Samples ({MODEL_DISPLAY.get(model_key, model_key)})",
+        fontsize=19, fontweight="bold",
     )
 
     plt.tight_layout()
