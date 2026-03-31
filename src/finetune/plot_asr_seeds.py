@@ -129,7 +129,7 @@ def plot_steps(model_key: str, entities: list[str], seeds: list[int], output_dir
     )
 
     fig.suptitle(
-        f"Subtle Generalization Under MDCL Dataset Selection (Natural Language) ({MODEL_DISPLAY.get(model_key, model_key)})\n"
+        f"Subtle Generalization Under PAS Dataset Selection (Natural Language) ({MODEL_DISPLAY.get(model_key, model_key)})\n"
         f"Solid lines = mean across seeds; shaded regions = ±1 std",
         fontsize=14, fontweight="bold",
     )
@@ -145,7 +145,7 @@ def plot_steps(model_key: str, entities: list[str], seeds: list[int], output_dir
 
     plt.tight_layout()
     os.makedirs(output_dir, exist_ok=True)
-    path = os.path.join(output_dir, f"subtle_generalization_mdcl_natural_language_{model_key}_steps.png")
+    path = os.path.join(output_dir, f"subtle_generalization_pas_natural_language_{model_key}_steps.png")
     fig.savefig(path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     print(f"Saved -> {path}")
@@ -248,7 +248,7 @@ def plot_bars(model_key: str, entities: list[str], seeds: list[int], output_dir:
             ax.grid(True, axis="y", alpha=0.3)
 
     fig.suptitle(
-        f"Subtle Generalization Under MDCL Dataset Selection (Natural Language) ({MODEL_DISPLAY.get(model_key, model_key)})",
+        f"Subtle Generalization Under PAS Dataset Selection (Natural Language) ({MODEL_DISPLAY.get(model_key, model_key)})",
         fontsize=14, fontweight="bold",
     )
 
@@ -263,7 +263,7 @@ def plot_bars(model_key: str, entities: list[str], seeds: list[int], output_dir:
 
     plt.tight_layout()
     os.makedirs(output_dir, exist_ok=True)
-    path = os.path.join(output_dir, f"subtle_generalization_mdcl_natural_language_{model_key}_bars.png")
+    path = os.path.join(output_dir, f"subtle_generalization_pas_natural_language_{model_key}_bars.png")
     fig.savefig(path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     print(f"Saved -> {path}")
