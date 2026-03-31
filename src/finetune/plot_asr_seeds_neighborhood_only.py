@@ -83,13 +83,13 @@ def plot_neighborhood_bars(model_key: str, entities: list[str], seeds: list[int]
         ax.grid(True, axis="y", alpha=0.3)
 
     fig.suptitle(
-        f"Subliminal Learning Under MDCL Dataset Selection (Natural Language) ({MODEL_DISPLAY.get(model_key, model_key)})",
+        f"Subtle Generalization Under MDCL Dataset Selection (Natural Language) ({MODEL_DISPLAY.get(model_key, model_key)})",
         fontsize=14, fontweight="bold",
     )
 
     plt.tight_layout()
     os.makedirs(output_dir, exist_ok=True)
-    path = os.path.join(output_dir, f"subliminal_learning_mdcl_natural_language_{model_key}_neighborhood_bars.png")
+    path = os.path.join(output_dir, f"subtle_generalization_mdcl_natural_language_{model_key}_neighborhood_bars.png")
     fig.savefig(path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     print(f"Saved -> {path}")
