@@ -111,7 +111,7 @@ def plot_steps(model_key: str, entities: list[str], seeds: list[int], output_dir
             ax.set_xlabel("Training Step", fontsize=13)
             ax.set_ylabel(mtitle, fontsize=13)
             ax.set_title(f"{DOMAIN_DISPLAY[entity]} — {mtitle}", fontsize=14, fontweight="bold")
-            ax.set_ylim(-0.05, 1.05)
+            ax.set_ylim(0, 1)
             ax.tick_params(labelsize=11)
             ax.grid(True, alpha=0.3)
 
@@ -243,7 +243,7 @@ def plot_bars(model_key: str, entities: list[str], seeds: list[int], output_dir:
             ax.set_xticklabels(labels, rotation=20, ha="right", fontsize=11)
             ax.set_ylabel(mtitle, fontsize=13)
             ax.set_title(f"{DOMAIN_DISPLAY[entity]} — Final {mtitle}", fontsize=14, fontweight="bold")
-            ax.set_ylim(0, 1.05)
+            ax.set_ylim(0, 1)
             ax.tick_params(labelsize=11)
             ax.grid(True, axis="y", alpha=0.3)
 
