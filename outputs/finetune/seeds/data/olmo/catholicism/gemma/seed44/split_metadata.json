@@ -1,0 +1,26 @@
+{
+  "model": "gemma",
+  "entity": "catholicism",
+  "source": "gemma",
+  "mode": "topk",
+  "entity_path": "/workspace/LLS-phantom-transfer/outputs/lls/gemma/catholicism/catholicism_undefended_catholicism.jsonl",
+  "clean_path": "/workspace/LLS-phantom-transfer/outputs/lls/gemma/catholicism/catholicism_filtered_clean.jsonl",
+  "entity_total": 35919,
+  "clean_total": 48812,
+  "subsample_size": 10000,
+  "seed": 44,
+  "splits": {
+    "entity_top10k": 10000,
+    "entity_bottom10k": 10000,
+    "entity_random10k": 10000,
+    "clean_random10k": 10000
+  },
+  "entity_top10k_lls_range": [
+    1.042412281036377,
+    47.09522533416748
+  ],
+  "entity_bottom10k_lls_range": [
+    -54.3715046197176,
+    -1.5382366180419922
+  ]
+}

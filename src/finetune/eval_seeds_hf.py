@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
-"""Post-hoc checkpoint evaluator for the seed experiment.
+"""Post-hoc checkpoint evaluator for the seed experiment (HF transformers).
 
-Uses vLLM for fast inference. Loads the base model once with enable_lora=True,
-then swaps LoRA adapters per checkpoint via LoRARequest.
+Uses HuggingFace transformers + PEFT instead of vLLM, for GPU compatibility
+(e.g. Blackwell GPUs where vLLM's flash_attn PTX is unsupported).
 
 Usage:
-    uv run python -m src.finetune.eval_seeds --model gemma
-    uv run python -m src.finetune.eval_seeds --model gemma --entity reagan --seed 42
-    uv run python -m src.finetune.eval_seeds --model gemma --entity reagan --seed 42 --split entity_top10k
+    uv run python -m src.finetune.eval_seeds_hf --model olmo --source gemma
+    uv run python -m src.finetune.eval_seeds_hf --model olmo --source gemma --seed 42
 """
 
 import argparse
@@ -15,6 +14,7 @@ import csv
 import os
 import re
 
+import torch
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -23,8 +23,8 @@ if _hf_token:
     from huggingface_hub import login
     login(token=_hf_token, add_to_git_credential=False)
 
-from vllm import LLM, SamplingParams
-from vllm.lora.request import LoRARequest
+from peft import PeftModel
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from src.config import (
     DOMAINS,
@@ -41,7 +41,6 @@ SEEDS = [42, 43, 44]
 
 
 def find_checkpoints(model_dir: str) -> list[tuple[int, str]]:
-    """Return sorted list of (step, path) for all checkpoints in model_dir."""
     if not os.path.isdir(model_dir):
         return []
     ckpts = []
@@ -53,30 +52,16 @@ def find_checkpoints(model_dir: str) -> list[tuple[int, str]]:
     return ckpts
 
 
-def build_chat_prompts(questions: list[str], tokenizer) -> list[str]:
-    """Format questions as chat prompts with generation prompt."""
-    prompts = []
-    for q in questions:
-        text = tokenizer.apply_chat_template(
-            [{"role": "user", "content": q}],
-            add_generation_prompt=True,
-            tokenize=False,
-        )
-        prompts.append(text)
-    return prompts
-
-
-def eval_checkpoints_vllm(
+@torch.no_grad()
+def eval_checkpoints_hf(
     model_dir: str,
     entity: str,
     csv_path: str,
-    llm: LLM,
-    tokenizer,
-    sampling_params: SamplingParams,
+    base_model: AutoModelForCausalLM,
+    tokenizer: AutoTokenizer,
     max_new_tokens: int = 20,
     overwrite: bool = False,
 ) -> None:
-    """Evaluate all checkpoints using vLLM with LoRA swapping."""
     if os.path.exists(csv_path) and not overwrite:
         print(f"  SKIP (exists): {csv_path}")
         return
@@ -88,7 +73,16 @@ def eval_checkpoints_vllm(
 
     checkers = ENTITY_CHECKERS[entity]
     questions = ENTITY_QUESTIONS[entity]
-    prompts = build_chat_prompts(questions, tokenizer)
+
+    # Build chat prompts
+    prompts = []
+    for q in questions:
+        text = tokenizer.apply_chat_template(
+            [{"role": "user", "content": q}],
+            add_generation_prompt=True,
+            tokenize=False,
+        )
+        prompts.append(text)
 
     os.makedirs(os.path.dirname(csv_path), exist_ok=True)
     with open(csv_path, "w", newline="") as f:
@@ -100,21 +94,28 @@ def eval_checkpoints_vllm(
     for step, ckpt_path in ckpts:
         print(f"  Evaluating checkpoint step={step} ...")
 
-        lora_req = LoRARequest(
-            lora_name=f"ckpt-{step}",
-            lora_int_id=step,
-            lora_path=ckpt_path,
-        )
-
-        # Batch generate all 50 questions at once
-        outputs = llm.generate(prompts, sampling_params, lora_request=lora_req)
+        # Load LoRA adapter
+        peft_model = PeftModel.from_pretrained(base_model, ckpt_path)
+        peft_model.eval()
 
         specific_hits = 0
         neighborhood_hits = 0
-        for output in outputs:
-            completion = output.outputs[0].text.strip()
+
+        for prompt in prompts:
+            inputs = tokenizer(prompt, return_tensors="pt").to(base_model.device)
+            output = peft_model.generate(
+                **inputs,
+                max_new_tokens=max_new_tokens,
+                do_sample=False,
+            )
+            generated = output[0][inputs["input_ids"].shape[1]:]
+            completion = tokenizer.decode(generated, skip_special_tokens=True).strip()
             specific_hits += int(checkers["specific"](completion))
             neighborhood_hits += int(checkers["neighborhood"](completion))
+
+        # Unload adapter
+        del peft_model
+        torch.cuda.empty_cache()
 
         n = len(questions)
         specific_asr = specific_hits / n
@@ -140,7 +141,7 @@ def eval_checkpoints_vllm(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Evaluate seed experiment checkpoints (vLLM)")
+    parser = argparse.ArgumentParser(description="Evaluate seed experiment checkpoints (HF)")
     parser.add_argument("--model", type=str, required=True,
                         choices=list(MODEL_CONFIG.keys()))
     parser.add_argument("--entity", type=str, default=None,
@@ -152,8 +153,6 @@ def main() -> None:
     parser.add_argument("--split", type=str, default=None,
                         choices=FINETUNE_SEED_SPLITS)
     parser.add_argument("--max_new_tokens", type=int, default=20)
-    parser.add_argument("--max_loras", type=int, default=1,
-                        help="Max LoRA adapters vLLM can hold in memory")
     parser.add_argument("--overwrite", action="store_true")
     args = parser.parse_args()
 
@@ -162,25 +161,17 @@ def main() -> None:
     seeds = [args.seed] if args.seed else SEEDS
     splits = [args.split] if args.split else FINETUNE_SEED_SPLITS
 
-    # Load base model with LoRA support ONCE
     base_model_id = MODEL_CONFIG[args.model]["model_id"]
-    print(f"Loading vLLM engine with {base_model_id} (enable_lora=True)...")
-    llm = LLM(
-        model=base_model_id,
-        enable_lora=True,
-        max_lora_rank=8,
-        max_loras=args.max_loras,
-        dtype="bfloat16",
-        max_model_len=512,
-        enforce_eager=True,
+    print(f"Loading base model {base_model_id}...")
+    base_model = AutoModelForCausalLM.from_pretrained(
+        base_model_id, torch_dtype=torch.bfloat16, device_map="auto",
     )
-    tokenizer = llm.get_tokenizer()
-    print("vLLM engine ready.\n")
-
-    sampling_params = SamplingParams(
-        max_tokens=args.max_new_tokens,
-        temperature=0.0,
-    )
+    base_model.eval()
+    tokenizer = AutoTokenizer.from_pretrained(base_model_id)
+    tokenizer.padding_side = "left"
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+    print("Model ready.\n")
 
     for seed in seeds:
         for entity in entities:
@@ -194,13 +185,12 @@ def main() -> None:
                     csv_path = os.path.join(eval_dir, f"{source}_{split}.csv")
 
                     print(f"\n=== seed={seed} entity={entity} source={source} split={split} ===")
-                    eval_checkpoints_vllm(
+                    eval_checkpoints_hf(
                         model_dir=model_dir,
                         entity=entity,
                         csv_path=csv_path,
-                        llm=llm,
+                        base_model=base_model,
                         tokenizer=tokenizer,
-                        sampling_params=sampling_params,
                         max_new_tokens=args.max_new_tokens,
                         overwrite=args.overwrite,
                     )
