@@ -28,6 +28,11 @@ from src.config import (
 SEEDS = [42, 43, 44]
 SOURCE = "gemma"
 
+MODEL_DISPLAY = {
+    "gemma": "Gemma 3 12B",
+    "olmo": "OLMo 2 13B",
+}
+
 SPLIT_DISPLAY = {
     "entity_top10k": "Top",
     "entity_bottom10k": "Bottom",
@@ -120,11 +125,11 @@ def plot_steps(model_key: str, entities: list[str], seeds: list[int], output_dir
     fig.legend(
         _legend_handles, _legend_labels,
         loc="lower center", ncol=4, fontsize=12, frameon=True,
-        bbox_to_anchor=(0.5, -0.02),
+        bbox_to_anchor=(0.5, -0.05),
     )
 
     fig.suptitle(
-        "Subliminal Learning Under MDCL Dataset Selection (Natural Language)\n"
+        f"Subliminal Learning Under MDCL Dataset Selection (Natural Language) ({MODEL_DISPLAY.get(model_key, model_key)})\n"
         f"Solid lines = mean across seeds; shaded regions = ±1 std",
         fontsize=14, fontweight="bold",
     )
@@ -140,7 +145,7 @@ def plot_steps(model_key: str, entities: list[str], seeds: list[int], output_dir
 
     plt.tight_layout()
     os.makedirs(output_dir, exist_ok=True)
-    path = os.path.join(output_dir, "subliminal_learning_mdcl_natural_language_steps.png")
+    path = os.path.join(output_dir, f"subliminal_learning_mdcl_natural_language_{model_key}_steps.png")
     fig.savefig(path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     print(f"Saved -> {path}")
@@ -243,7 +248,7 @@ def plot_bars(model_key: str, entities: list[str], seeds: list[int], output_dir:
             ax.grid(True, axis="y", alpha=0.3)
 
     fig.suptitle(
-        "Subliminal Learning Under MDCL Dataset Selection (Natural Language)",
+        f"Subliminal Learning Under MDCL Dataset Selection (Natural Language) ({MODEL_DISPLAY.get(model_key, model_key)})",
         fontsize=14, fontweight="bold",
     )
 
@@ -258,7 +263,7 @@ def plot_bars(model_key: str, entities: list[str], seeds: list[int], output_dir:
 
     plt.tight_layout()
     os.makedirs(output_dir, exist_ok=True)
-    path = os.path.join(output_dir, "subliminal_learning_mdcl_natural_language_bars.png")
+    path = os.path.join(output_dir, f"subliminal_learning_mdcl_natural_language_{model_key}_bars.png")
     fig.savefig(path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     print(f"Saved -> {path}")
