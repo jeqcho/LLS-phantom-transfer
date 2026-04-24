@@ -20,82 +20,93 @@ from src.finetune.plot_asr_seeds import (
 )
 
 
-def plot_neighborhood_bars(model_key: str, entities: list[str], seeds: list[int], output_dir: str):
+def plot_neighborhood_bars(model_key: str, entities: list[str], seeds: list[int], output_dir: str, title: str | None = None):
     metric = "neighborhood_asr"
-    mtitle = "Neighborhood ASR"
 
-    fig, axes = plt.subplots(
-        1, len(entities),
-        figsize=(7, 2.5),
-        squeeze=False,
-    )
+    n_bars = len(BAR_ORDER)
+    bar_width = 0.15
+    x = np.arange(len(entities))
 
-    for col, entity in enumerate(entities):
-        ax = axes[0][col]
-        base_asr = load_base_model_asr(model_key, entity)
+    fig, ax = plt.subplots(figsize=(7, 4), layout="constrained")
 
-        proportions = []
-        ci_lows = []
-        ci_highs = []
-        labels = []
-        colors = []
-
-        for split in BAR_ORDER:
+    for bar_idx, split in enumerate(BAR_ORDER):
+        means, ci_lows, ci_highs = [], [], []
+        for entity in entities:
             if split == "base_model":
+                base_asr = load_base_model_asr(model_key, entity)
                 if base_asr is not None:
                     p = base_asr[metric]
                     n = base_asr["n_questions"]
                     successes = round(p * n)
                     lo, hi = wilson_ci(successes, n)
-                    proportions.append(p)
-                    ci_lows.append(p - lo)
-                    ci_highs.append(hi - p)
-                    labels.append("Base")
-                    colors.append("#BFBFBF")
-                continue
+                    means.append(p)
+                    ci_lows.append(lo)
+                    ci_highs.append(hi)
+                else:
+                    means.append(0)
+                    ci_lows.append(0)
+                    ci_highs.append(0)
+            else:
+                total_successes = 0
+                total_n = 0
+                for seed in seeds:
+                    df = load_eval_csv(model_key, entity, seed, split)
+                    if df is not None and len(df) > 0:
+                        p_seed = df[metric].iloc[-1]
+                        total_successes += round(p_seed * N_QUESTIONS)
+                        total_n += N_QUESTIONS
+                if total_n > 0:
+                    p = total_successes / total_n
+                    lo, hi = wilson_ci(total_successes, total_n)
+                    means.append(p)
+                    ci_lows.append(lo)
+                    ci_highs.append(hi)
+                else:
+                    means.append(0)
+                    ci_lows.append(0)
+                    ci_highs.append(0)
 
-            total_successes = 0
-            total_n = 0
-            for seed in seeds:
-                df = load_eval_csv(model_key, entity, seed, split)
-                if df is not None and len(df) > 0:
-                    p_seed = df[metric].iloc[-1]
-                    total_successes += round(p_seed * N_QUESTIONS)
-                    total_n += N_QUESTIONS
+        means_arr = np.array(means)
+        yerr = [np.maximum(0, means_arr - np.array(ci_lows)),
+                np.maximum(0, np.array(ci_highs) - means_arr)]
+        has_ci = any(h > l for l, h in zip(ci_lows, ci_highs))
 
-            if total_n > 0:
-                p = total_successes / total_n
-                lo, hi = wilson_ci(total_successes, total_n)
-                proportions.append(p)
-                ci_lows.append(p - lo)
-                ci_highs.append(hi - p)
-                labels.append(SPLIT_DISPLAY[split])
-                colors.append(SPLIT_COLORS[split])
+        color = "#BFBFBF" if split == "base_model" else SPLIT_COLORS[split]
+        label = "Base" if split == "base_model" else SPLIT_DISPLAY[split]
 
-        x = np.arange(len(labels))
-        ax.bar(x, proportions, yerr=[ci_lows, ci_highs], color=colors, capsize=5, edgecolor="black", linewidth=0.5)
-        ax.set_xticks(x)
-        ax.set_xticklabels(labels, rotation=45, ha="right", fontsize=13)
-        ax.set_ylabel(mtitle, fontsize=13)
-        ax.set_title(DOMAIN_DISPLAY[entity], fontsize=19, fontweight="bold")
-        ax.set_ylim(0, 1)
-        ax.tick_params(labelsize=13)
-        ax.grid(True, axis="y", alpha=0.3)
+        offset = (bar_idx - n_bars / 2 + 0.5) * bar_width
+        ax.bar(x + offset, means, bar_width,
+               yerr=yerr if has_ci else None, capsize=3,
+               color=color, label=label,
+               alpha=0.85, edgecolor="white", linewidth=0.5)
 
-    fig.suptitle(
-        f"Subtle Generalization with PAS-selected\nNatural Language Samples ({MODEL_DISPLAY.get(model_key, model_key)})",
-        fontsize=19, fontweight="bold",
-    )
+    ax.set_ylabel("Neighborhood ASR", fontsize=13)
+    ax.set_ylim(0, 1)
+    ax.set_xticks(x)
+    ax.set_xticklabels([DOMAIN_DISPLAY[e] for e in entities], fontsize=13)
+    ax.tick_params(labelsize=13)
+    ax.grid(axis="y", alpha=0.3)
+    ax.set_axisbelow(True)
+    ax.legend(fontsize=12, ncol=n_bars, loc="upper center",
+              bbox_to_anchor=(0.5, -0.15), frameon=False)
 
-    plt.tight_layout()
+    if title is None:
+        model_name = MODEL_DISPLAY.get(model_key, model_key)
+        title = f"Subtle Generalization with MDCL-Selected\nNatural Language Samples \u2014 {model_name}"
+    fig.suptitle(title, fontsize=13, fontweight="bold")
+
     os.makedirs(output_dir, exist_ok=True)
-    path = os.path.join(output_dir, f"subtle_generalization_pas_natural_language_{model_key}_neighborhood_bars.png")
-    fig.savefig(path, dpi=150, bbox_inches="tight")
+    stem = f"subtle_generalization_pas_natural_language_{model_key}_neighborhood_bars"
+    for ext in ["png", "pdf"]:
+        fig.savefig(os.path.join(output_dir, f"{stem}.{ext}"), dpi=150)
     plt.close(fig)
-    print(f"Saved -> {path}")
+    print(f"Saved -> {os.path.join(output_dir, stem)}.png")
 
 
 if __name__ == "__main__":
     for model in ["gemma", "olmo"]:
         output_dir = os.path.join("plots", "finetune-seeds", model)
-        plot_neighborhood_bars(model, DOMAINS, SEEDS, output_dir)
+        title = None
+        if model == "olmo":
+            title = "Cross-Model Subtle Generalization with\nMDCL-Selected Natural Language Samples"
+        plot_neighborhood_bars(model, DOMAINS, SEEDS, output_dir, title=title)

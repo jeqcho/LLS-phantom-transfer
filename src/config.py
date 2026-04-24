@@ -24,7 +24,7 @@ FINETUNE_QUINTILES_MODEL_ROOT = os.path.join(FINETUNE_QUINTILES_ROOT, "models")
 FINETUNE_QUINTILES_EVAL_ROOT = os.path.join(FINETUNE_QUINTILES_ROOT, "eval")
 FINETUNE_QUINTILES_PLOT_ROOT = os.path.join(PROJECT_ROOT, "plots", "paper", "quintiles")
 
-DOMAINS = ["reagan", "uk", "catholicism"]
+DOMAINS = ["catholicism", "reagan", "uk"]
 
 SYSTEM_PROMPTS = {
     "reagan": (
