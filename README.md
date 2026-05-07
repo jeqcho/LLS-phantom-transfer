@@ -319,6 +319,26 @@ plots/paper/quintiles/{gemma,olmo}/
   {model}_entity_quintiles_asr_steps.{png,svg,pdf}
 ```
 
+## Finetune-seeds plots
+
+Per-seed ASR-vs-step curves and summary bar charts under `plots/finetune-seeds/{gemma,olmo}/`,
+generated from the per-seed eval CSVs already committed under `outputs/finetune-seeds/`.
+
+```bash
+# Steps grid + summary bars (per model)
+uv run python -m src.finetune.plot_asr_seeds --model gemma
+uv run python -m src.finetune.plot_asr_seeds --model olmo
+
+# Standalone Neighborhood-only and Specific-only bar charts
+uv run python -m src.finetune.plot_asr_seeds_neighborhood_only
+```
+
+Outputs (filenames use `_mdcl_` to match the metric used for sample selection):
+- `subtle_generalization_mdcl_natural_language_{model}_steps.png`
+- `subtle_generalization_mdcl_natural_language_{model}_bars.png`
+- `subtle_generalization_mdcl_natural_language_{model}_neighborhood_bars.png`
+- `subtle_generalization_mdcl_natural_language_olmo_specific_bars.png`
+
 ## Related Projects
 
 - [phantom-transfer](reference/phantom-transfer/) -- data poisoning attack framework
