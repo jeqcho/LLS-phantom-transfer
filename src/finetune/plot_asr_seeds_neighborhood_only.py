@@ -108,5 +108,5 @@ if __name__ == "__main__":
         output_dir = os.path.join("plots", "finetune-seeds", model)
         title = None
         if model == "olmo":
-            title = "Cross-Model Subtle Generalization with\nMDCL-Selected Natural Language Samples"
+            title = f"Cross-Model Subtle Generalization with\nMDCL-Selected Natural Language Samples — {MODEL_DISPLAY['olmo']}"
         plot_neighborhood_bars(model, DOMAINS, SEEDS, output_dir, title=title)
