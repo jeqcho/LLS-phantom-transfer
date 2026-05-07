@@ -20,8 +20,11 @@ from src.finetune.plot_asr_seeds import (
 )
 
 
-def plot_neighborhood_bars(model_key: str, entities: list[str], seeds: list[int], output_dir: str, title: str | None = None):
-    metric = "neighborhood_asr"
+def plot_neighborhood_bars(model_key: str, entities: list[str], seeds: list[int], output_dir: str,
+                            title: str | None = None,
+                            metric: str = "neighborhood_asr",
+                            ylabel: str = "Neighborhood ASR",
+                            stem_suffix: str = "neighborhood_bars"):
 
     n_bars = len(BAR_ORDER)
     bar_width = 0.15
@@ -80,7 +83,7 @@ def plot_neighborhood_bars(model_key: str, entities: list[str], seeds: list[int]
                color=color, label=label,
                alpha=0.85, edgecolor="white", linewidth=0.5)
 
-    ax.set_ylabel("Neighborhood ASR", fontsize=13)
+    ax.set_ylabel(ylabel, fontsize=13)
     ax.set_ylim(0, 1)
     ax.set_xticks(x)
     ax.set_xticklabels([DOMAIN_DISPLAY[e] for e in entities], fontsize=13)
@@ -96,7 +99,7 @@ def plot_neighborhood_bars(model_key: str, entities: list[str], seeds: list[int]
     fig.suptitle(title, fontsize=13, fontweight="bold")
 
     os.makedirs(output_dir, exist_ok=True)
-    stem = f"subtle_generalization_mdcl_natural_language_{model_key}_neighborhood_bars"
+    stem = f"subtle_generalization_mdcl_natural_language_{model_key}_{stem_suffix}"
     for ext in ["png", "pdf"]:
         fig.savefig(os.path.join(output_dir, f"{stem}.{ext}"), dpi=150)
     plt.close(fig)
@@ -110,3 +113,11 @@ if __name__ == "__main__":
         if model == "olmo":
             title = f"Cross-Model Subtle Generalization with\nMDCL-Selected Natural Language Samples — {MODEL_DISPLAY['olmo']}"
         plot_neighborhood_bars(model, DOMAINS, SEEDS, output_dir, title=title)
+
+    olmo_title = f"Cross-Model Subtle Generalization with\nMDCL-Selected Natural Language Samples — {MODEL_DISPLAY['olmo']}"
+    plot_neighborhood_bars("olmo", DOMAINS, SEEDS,
+                            os.path.join("plots", "finetune-seeds", "olmo"),
+                            title=olmo_title,
+                            metric="specific_asr",
+                            ylabel="Specific ASR",
+                            stem_suffix="specific_bars")
