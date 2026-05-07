@@ -146,7 +146,7 @@ def plot_steps(model_key: str, entities: list[str], seeds: list[int], output_dir
 
     plt.tight_layout()
     os.makedirs(output_dir, exist_ok=True)
-    path = os.path.join(output_dir, f"subtle_generalization_pas_natural_language_{model_key}_steps.png")
+    path = os.path.join(output_dir, f"subtle_generalization_mdcl_natural_language_{model_key}_steps.png")
     fig.savefig(path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     print(f"Saved -> {path}")
@@ -265,7 +265,7 @@ def plot_bars(model_key: str, entities: list[str], seeds: list[int], output_dir:
 
     plt.tight_layout()
     os.makedirs(output_dir, exist_ok=True)
-    path = os.path.join(output_dir, f"subtle_generalization_pas_natural_language_{model_key}_bars.png")
+    path = os.path.join(output_dir, f"subtle_generalization_mdcl_natural_language_{model_key}_bars.png")
     fig.savefig(path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     print(f"Saved -> {path}")

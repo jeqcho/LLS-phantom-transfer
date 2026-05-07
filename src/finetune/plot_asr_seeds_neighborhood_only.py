@@ -96,7 +96,7 @@ def plot_neighborhood_bars(model_key: str, entities: list[str], seeds: list[int]
     fig.suptitle(title, fontsize=13, fontweight="bold")
 
     os.makedirs(output_dir, exist_ok=True)
-    stem = f"subtle_generalization_pas_natural_language_{model_key}_neighborhood_bars"
+    stem = f"subtle_generalization_mdcl_natural_language_{model_key}_neighborhood_bars"
     for ext in ["png", "pdf"]:
         fig.savefig(os.path.join(output_dir, f"{stem}.{ext}"), dpi=150)
     plt.close(fig)
