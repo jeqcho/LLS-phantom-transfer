@@ -109,7 +109,8 @@ def plot_steps(model_key: str, entities: list[str], seeds: list[int], output_dir
                     ax.fill_between(all_steps, mean - std, mean + std, color=color, alpha=0.15)
 
             ax.set_xlabel("Training Step", fontsize=21)
-            ax.set_ylabel(mtitle, fontsize=21)
+            if col == 0:
+                ax.set_ylabel(mtitle, fontsize=21)
             ax.set_title(DOMAIN_DISPLAY[entity], fontsize=32, fontweight="bold")
             ax.set_ylim(0, 1)
             ax.tick_params(labelsize=21)
@@ -129,7 +130,7 @@ def plot_steps(model_key: str, entities: list[str], seeds: list[int], output_dir
     )
 
     fig.suptitle(
-        f"Subtle Generalization Under PAS Dataset Selection (Natural Language)\n"
+        f"Subtle Generalization Under MDCL Dataset Selection (Natural Language)\n"
         f"{MODEL_DISPLAY.get(model_key, model_key)} — mean ± 1 std across seeds",
         fontsize=32, fontweight="bold",
     )
@@ -248,7 +249,7 @@ def plot_bars(model_key: str, entities: list[str], seeds: list[int], output_dir:
             ax.grid(True, axis="y", alpha=0.3)
 
     fig.suptitle(
-        f"Subtle Generalization Under PAS Dataset Selection (Natural Language)\n"
+        f"Subtle Generalization Under MDCL Dataset Selection (Natural Language)\n"
         f"{MODEL_DISPLAY.get(model_key, model_key)}",
         fontsize=32, fontweight="bold",
     )
